@@ -14,7 +14,7 @@ source(here("GitHub_code", "cglops-change-detection", "src", "bfast-cal", "04-va
 pbo <- pboptions(type="timer")
 mycores <- detectCores()
 set.seed(123, kind = "L'Ecuyer-CMRG" )
-datasetname <- "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\"
+base_path <- "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\"
 # load data ----------------------------------------------
 
 
@@ -104,14 +104,16 @@ cal_BFAST <- function( breaks, magthreshold, formula, magcomponent, coefcomponen
   if ("Magnitude.before" %in% colnames(theoutput)) {
     theoutput <- theoutput %>% 
       mutate(Magnitude = if_else(!is.na(Magnitude.RMSD),Magnitude.RMSD, 0))}
-  # make an output file name 
-  outname <- output_path
   
-  
-  # export
-  data.table::fwrite(theoutput,
-                     file = outname,
-                     showProgress = TRUE)
+  # if (is.null(output_path) == FALSE) { # make an output file name 
+  # outname <- output_path
+  # 
+  # 
+  # # export
+  # data.table::fwrite(theoutput,
+  #                    file = outname,
+  #                    showProgress = TRUE)
+  # } 
   
   return(theoutput)
 }
@@ -145,7 +147,7 @@ writeoutput <- function(outputbfast, ouputpath) {
   # make an output file name 
   outname <- ouputpath
   
-  
+  print(theoutput)
   # export
   data.table::fwrite(theoutput,
                      file = outname,
@@ -318,7 +320,31 @@ BFASTlite_LWZ_S_inf <- cal_BFAST("LWZ", -Inf, response ~ harmon,
 writeoutput(BFASTlite_LWZ_S_inf, "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\_output_BFASTlite_LWZ_S_inf.csv")
 
 
+###################################### WORK ON NDVI VALIDATION DATASET #################
 
 
+BFASTlite_BIC_T_025_val <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
+                                     "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\_cloudfree_L8TS_NDVI_val.gpkg", 
+                                     "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\_output_BFASTlite_BIC_T_025_val.csv",  plot = FALSE, cl = mycores)
 
+
+###################################### RUN BFAST LITE ON SATELLITE DATA 
+
+mainDir <- "C:\\Master_Thesis\\"
+subDir <- "Output"
+ifelse(!dir.exists(file.path(mainDir, subDir)), dir.create(file.path(mainDir, subDir)), FALSE)
+SR_GPKG = "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\__cloudfree_L8TS__SR_val.gpkg"
+
+SRNames = st_layers(SR_GPKG)$name
+SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
+SR_nogeom <- lapply(SR, function(x) sf::st_drop_geometry(x))
+
+for (layer in seq_along(SR)) { breakpoint_SR <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
+                                                          SR_nogeom[[layer]], 
+                                                          NULL,  plot = FALSE, cl = mycores)
+OutFile = paste(base_path, "_output_BFASTlite_breakpoint_SR_.gpkg", sep="_")
+
+st_write(breakpoint_SR, dsn = OutFile, layer = SRNames[layer])
+
+}
 
