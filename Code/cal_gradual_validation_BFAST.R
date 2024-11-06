@@ -14,6 +14,7 @@ setwd("C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\")
 NDVI_breakpoint_list <- list.files(path = "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\", pattern = "^_output_BFASTlite") 
 
 cal_comb_ref <-read.csv("C:\\Master_Thesis\\Intermediate product\\cal_compl_data.csv")
+
 list_breakpoint_output <- data.frame()
 for (file in NDVI_breakpoint_list) {
   read_file <- read.csv(file)
@@ -35,3 +36,13 @@ file_name_df <- t(data.frame(list_file, row.names = NULL))
 colnames(file_name_df) <- "Parameters"
 breakpoint_stats_bfastlite <- cbind(file_name_df,list_breakpoint_output)
 write.csv(breakpoint_stats_bfastlite, file = "C:\\Master_Thesis\\Intermediate product\\_stats_breakpoints_bfastlite.csv", row.names = FALSE)
+
+
+
+################ VALIDATION DATASET
+val_comb_ref <-read.csv("C:\\Master_Thesis\\Intermediate product\\val_compl_data.csv")
+NDVI_val <- read.csv("C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\_output_BFASTlite_BIC_T_025_val.csv")
+NDVI_val <- validateAlgorithmTotal(ref_df = val_comb_ref, 
+                                   algo_df = NDVI_val, cl= mycores)
+NDVI_stats_val <- myFPStats(NDVI_val, NewAccuracy = TRUE)
+write.csv(NDVI_stats_val, file = "C:\\Master_Thesis\\Output\\_output_BFASTlite_NDVI_stats_val.csv", row.names = FALSE)
