@@ -338,4 +338,5 @@ aggregatefun <- function(sample_ids, SR_breakpoints) {
     }
     
   }
+  return(agg_BFASTlite_output)
 }
