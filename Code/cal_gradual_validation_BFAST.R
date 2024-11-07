@@ -46,3 +46,15 @@ NDVI_val <- validateAlgorithmTotal(ref_df = val_comb_ref,
                                    algo_df = NDVI_val, cl= mycores)
 NDVI_stats_val <- myFPStats(NDVI_val, NewAccuracy = TRUE)
 write.csv(NDVI_stats_val, file = "C:\\Master_Thesis\\Output\\_output_BFASTlite_NDVI_stats_val.csv", row.names = FALSE)
+
+####################### SR VALIDATION DATASET
+SR_breakpoint <- "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\__output_BFASTlite_breakpoint_SR_.gpkg"
+SRNames = st_layers(SR_breakpoint)$name
+SR_breakpoints <- lapply(SRNames, function(name) st_read(SR_breakpoint, layer=name))
+
+aggegrate_SR_output_BFASTlite <- aggregatefun(unique(SR_breakpoints[[1]]$sample_id), SR_breakpoints)
+write.csv(aggegrate_SR_output_BFASTlite, file = "C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\_output_BFASTlite_aggegrate_SR_output.csv", row.names = FALSE)
+aggerate_SR_ouput_stats <- read.csv("C:\\Master_Thesis\\Intermediate product\\cloud_free_product\\_output_BFASTlite_aggegrate_SR_output.csv")
+aggerate_SR_ouput_stats <- validateAlgorithmTotal(ref_df = val_comb_ref, 
+                                                  algo_df = aggerate_SR_ouput_stats, cl= mycores)
+aggerate_SR_ouput_stats_ <- myFPStats(aggerate_SR_ouput_stats, NewAccuracy = TRUE)
