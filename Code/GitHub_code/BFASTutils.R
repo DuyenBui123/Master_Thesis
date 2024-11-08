@@ -7,7 +7,7 @@ source(here("GitHub_code", "Utils.R"))
 library(strucchangeRcpp)
 library(bfast)
 source(here("GitHub_code/cglops-change-detection/src/utils/enable_fast_bfast.r"))
-#source(here("GitHub_code/cglops-change-detection/src/bfast-cal/plotting.r"))
+source(here("GitHub_code/cglops-change-detection/src/bfast-cal/plotting.r"))
 
 
 #' Functions in this script are adapted from '02-detectbreaks.r' by Dainius Masiliunas, 
@@ -189,7 +189,7 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
     }
     
     if (plot){
-      bfast:::plot.bfastlite(bp, bpp, breaks=breaks, bpMag=bpMag, ...)
+      plot.bfast0n(bp, bpp, breaks=breaks, bpMag=bpMag, ...)
       abline(v=TargetYears, col="red")
     }
     
@@ -292,51 +292,234 @@ TestMODttest = function(i, ChangedVITS, TargetYears=AllTargetYears, sig=0.05)
     return(NA)
   }
 }
-
-aggregatefun <- function(sample_ids, SR_breakpoints) {
-  flooryear <- c()
-  temp_df_gr <- data.frame()
-  agg_BFASTlite_output <- data.frame()
-  for (sample_id in sample_ids) {
+# This function used to aggregate the output of satellite data after running it on BFAST lite
+#' 
+#' @param sample_ids     a unique list of samle ids from satellite data
+#' @param SR_breakpoints    the output breakpoints of each band of the satellite data. It should at least include:
+#'                            sample_id, Breakpoint, and Magnitude columns
+#' @param threshold a number that determine whether there is any breakpoints or not                          
+#' @return agg_BFASTlite_output a data frame that contain the largest breakpoint magnitude among all bands if there are breakpoints
+aggregatefun <- function(sample_ids, SR_breakpoints, threshold) {
+  flooryear <- c() # create an empty vector to store the floor year or base year of each breakpoint
+  temp_df_gr <- data.frame() # create an empty data frame for temporary storage
+  agg_BFASTlite_output <- data.frame() # create an empty data frame to store the output. 
+  for (sample_id in sample_ids) { # reset flooryear and temp_data frame for each iteration of a sample id
     flooryear <- c()
     temp_df <- data.frame()
-    
+    x_temp_df <- data.frame()
     for (layer in seq_along(SR)) {
       x <- SR_breakpoints[[layer]][SR_breakpoints[[layer]]$sample_id == sample_id,]
-      x$flooryear <- "none"
-      flooryear <- append(flooryear, floor(x$Breakpoint))
+      x$flooryear <- "none" # create a new column for the satellite dataset to store floor year of each breakpoint
+      flooryear <- append(flooryear, floor(x$Breakpoint)) # append a floor each of each observation in the flooryear vector
     }
     if (all(is.na(flooryear)) == TRUE | all(unique(flooryear) == -9999.000) == TRUE){
-      agg_BFASTlite_output <- rbind(agg_BFASTlite_output, x)
+      # if all floor years of all bands are either NA or -9999.000, there is no breakpoint. Therefore no need more investigation
+      agg_BFASTlite_output <- rbind(agg_BFASTlite_output, x) # append the observation directly to the output data frame
       
-    } else {
-      
-      flooryear <- as.data.frame(table(flooryear))
-      flooryear$flooryear <- as.numeric(as.character(flooryear$flooryear))
-      flooryear<- flooryear[flooryear$flooryear %in% flooryear$flooryear[flooryear$flooryear >= 2016 &
-                                                                           flooryear$flooryear %in% flooryear$flooryear[flooryear$flooryear <= 2019]],]
-      
-      if(any(flooryear$Freq >= 3)) {
-        selected_flooryear <- flooryear[flooryear$Freq >=3,]$flooryear
-        for (layer in seq_along(SR)) {
-          x <- SR_breakpoints[[layer]][SR_breakpoints[[layer]]$sample_id == sample_id,]
-          x$flooryear <- floor(x$Breakpoint)
-          x<- x[x$flooryear %in% flooryear$flooryear[flooryear$flooryear >= 2016 &
-                                                       flooryear$flooryear %in% flooryear$flooryear[flooryear$flooryear <= 2019]],]
-          temp_df <- rbind(temp_df,x)
-          
-          
+    } else if (as.character(names(which.max(table(flooryear)))) == "NA" | as.numeric(names(which.max(table(flooryear)))) == -9999 ) {
+      # if the floor years of all the observation contain both NA, -9999.000 and a real numeric number, and NA or -9999.000 are more 
+      # dominant then there is no breakpoint occur for that sample id
+      for (layer in seq_along(SR_breakpoints)) {
+        x <- SR_breakpoints[[layer]][SR_breakpoints[[layer]]$sample_id == sample_id,]
+        x$flooryear <- "none"
+        if (all(unique(x$Breakpoint) == -9999) == TRUE | all(is.na(x$Breakpoint)) == TRUE) {
+          x_temp_df <- rbind(x_temp_df, x)
         }
         
+      }
+      agg_BFASTlite_output <- rbind(agg_BFASTlite_output, x_temp_df[1,]) 
+    } else {
+      
+      flooryear <- as.data.frame(table(flooryear)) # convert collected floor year of all observation in to a frequency table data frame
+      flooryear$flooryear <- as.numeric(as.character(flooryear$flooryear)) # convert factor into numeric
+      # extract only floor year that are in the preiod of 2016:2019
+      flooryear<- flooryear[flooryear$flooryear %in% flooryear$flooryear[flooryear$flooryear >= 2016 &
+                                                                           flooryear$flooryear %in% flooryear$flooryear[flooryear$flooryear <= 2019]],]
+      # check whether there is any floor year that occur more than the threshold in order to determine the dominant years that contains threholds
+      if(any(flooryear$Freq >= threshold)) { # only floor year that has the frequency larger than the threshold
+        selected_flooryear <- flooryear[flooryear$Freq >=threshold,]$flooryear
+        for (layer in seq_along(SR_breakpoints)) { # extract all the observations of all bands that contain the dominant floor years
+          x <- SR_breakpoints[[layer]][SR_breakpoints[[layer]]$sample_id == sample_id,]
+          x$flooryear <- floor(x$Breakpoint)
+          x<- x[x$flooryear %in% selected_flooryear,] # selct only observation that has the floor year the same as in the slected floor year of all the layers
+          temp_df <- rbind(temp_df,x) # bind the observation into a temporary dataframe
+          
+        }
+        # find the maximum value of magnitude for each group floor year and turn the result into dataframe
         temp_df_gr <- temp_df %>% group_by(flooryear) %>%
           filter(Magnitude == max(Magnitude))%>%
           ungroup() %>%
           as.data.frame()
         
+      } else { # there is no floor year that has frequency larger than the threshold, no change will be assigned to that sample id
+        obs_nochange <- x[1,]
+        obs_nochange$Breakpoint <- -9999.000
+        obs_nochange$Magnitude <- 0.0000
+        obs_nochange$Coefficients <- 0.0000
+        obs_nochange$Rsq <- 0.0000000
+        obs_nochange$Magnitude.before <- NA
+        obs_nochange$Magnitude.after <- NA
+        obs_nochange$Magnitude.diff <- NA
+        obs_nochange$Magnitude.RMSD <- NA
+        obs_nochange$Magnitude.MAD <- NA
+        obs_nochange$Magnitude.MD <- NA
+        agg_BFASTlite_output <- rbind(agg_BFASTlite_output, obs_nochange)
       }
+      # add the output into the data frame output
       agg_BFASTlite_output <- rbind(agg_BFASTlite_output, temp_df_gr)
     }
     
   }
   return(agg_BFASTlite_output)
+}
+
+
+# Function used for calibrate BFAST lite with different parameters. This function
+# uses breakpoint detection function writen by Dainius Masulinus and preprocessing + writen csv file by Sven-Arne
+
+#' @param breaks number of breaks that are set of the algorithm e.g. BIC, LWZ, and RSS
+#' @param magthreshold  threshold above which the breaks are kept. Breaks lower than the threshold are discarded
+#' @param formula Formula passed to sctest() and bfastpp()
+#' @param magcomponent components (possibly multiple for which to calculate the magnitudes (trend/harmonsin1/harmoncos3/...)
+#' @param coefcomponent component (one!) for coefficient difference calculation
+#' @param validating_data_path path to data need to be detected. This data is a time series and has a gpkg format
+#' @param output_path path and name of output needed to be writen into CSV
+#' @param cl number of cores used to run the data on your computers. It is important to setup paralell computation
+#' @param plot Whether to call plot.bfast0n() on the output
+#'
+#' @return a data frame that contains output of bfast lite joined with their corresponding sample_ids
+#' or NA if not enough observations/error in running the function.
+cal_BFAST <- function( breaks, magthreshold, formula, magcomponent, coefcomponent, validating_data_path, output_path,plot, cl=mycores) {
+  params <- list(
+    preprocessing = list(
+      interpolate = FALSE,
+      seasonality = ""),
+    bfastLiteInputs = list(
+      InputTS="",
+      scrange=NULL, 
+      scsig=0.05, 
+      breaks= breaks,
+      sctype="OLS-MOSUM", 
+      maginterval=0.1, 
+      magcomponent=magcomponent,
+      magstat="RMSD", 
+      magthreshold= magthreshold, 
+      coefcomponent=coefcomponent,
+      coefthresholds=c(0, 0), 
+      plot=plot, 
+      quiet=TRUE, 
+      order=3,
+      formula=formula, 
+      TargetYears=NULL,
+      seasonfreq=0.5, 
+      breaknumthreshold=Inf, 
+      altformula=NULL
+    )
+  )
+  # load an preprocess the input datafile 
+  l8ndvi <- prepL8NDVIdataframe(validating_data_path)
+  
+  # prepare time series ------------------------------------------------------
+  
+  # get frequency table of acquisitions per year
+  tab <- getFreqTabByYear(validating_data_path)
+  
+  # set the seasonality of the input time series
+  
+  if(!is.numeric(params$preprocessing$seasonality)){
+    # define the time series frequency by the minimum number of aquisitions in the time series
+    params$preprocessing$seasonality <- min(tab$Frequency[2:(length(tab$Frequency)-1)])
+  }
+  
+  # make list with timeseries (ts) objects 
+  print("Prepare time series list")
+  tslist <- pblapply(1:nrow(l8ndvi), 
+                     FUN = getTrimmedts, 
+                     dframe = l8ndvi, 
+                     lookuptable = tab, 
+                     tsfreq = params$preprocessing$seasonality, 
+                     interpolate = params$preprocessing$interpolate, 
+                     cl = mycores)
+  # --------- RUN BFAST Lite -------------------------------------------
+  runBFASTLite <- function(i,timeserieslist, parameters){
+    parameters$InputTS <- timeserieslist[[i]]
+    return(do.call(UseBFASTLite, parameters))
+  }
+  
+  bfastres <- pblapply(1:length(tslist),
+                       FUN = runBFASTLite,
+                       timeserieslist = tslist,
+                       parameters = params$bfastLiteInputs,
+                       cl = mycores)
+  # join sample ids and centroid coordinates to the BFAST Monitor output
+  print("Join output to sample ID information")
+  theoutput <- pblapply(1:length(bfastres), 
+                        FUN = joinOutput, 
+                        algo_list = bfastres, 
+                        dfids = l8ndvi, 
+                        cl = mycores)
+  
+  # concatenate all 1-row data.frames into one large data.frame
+  theoutput <- data.table::rbindlist(theoutput, fill = TRUE)
+  
+  # add prediction ids to each prediction. 
+  theoutput <- theoutput %>% 
+    group_by(sample_id) %>% 
+    mutate(pred_id = row_number()*10) %>% 
+    as.data.frame()
+  
+  
+  
+  #' if there is a magnitude to report, 
+  #' fill the Magnitude column with "Mangitude.before"
+  if ("Magnitude.before" %in% colnames(theoutput)) {
+    theoutput <- theoutput %>% 
+      mutate(Magnitude = if_else(!is.na(Magnitude.RMSD),Magnitude.RMSD, 0))}
+  if ("tile" %in% colnames(validating_data_path)) {return(theoutput)} else {
+    # make an output file name 
+    outname <- ouputpath
+    
+    
+    # export
+    data.table::fwrite(theoutput,
+                       file = outname,
+                       showProgress = TRUE)
+    return(theoutput)
+  }
+  
+}
+# This function used to write the output after running the dataset on BFAST lite. This fuction only
+writeoutput <- function(outputbfast, ouputpath) {
+  # join sample ids and centroid coordinates to the BFAST Monitor output
+  print("Join output to sample ID information")
+  theoutput <- pblapply(1:length(outputbfast), 
+                        FUN = joinOutput, 
+                        algo_list = outputbfast, 
+                        dfids = l8ndvi, 
+                        cl = mycores)
+  
+  # concatenate all 1-row data.frames into one large data.frame
+  theoutput <- data.table::rbindlist(theoutput, fill = TRUE)
+  
+  # add prediction ids to each prediction. 
+  theoutput <- theoutput %>% 
+    group_by(sample_id) %>% 
+    mutate(pred_id = row_number()*10) %>% 
+    as.data.frame()
+  
+  
+  
+  #' if there is a magnitude to report, 
+  #' fill the Magnitude column with "Mangitude.before"
+  if ("Magnitude.before" %in% colnames(theoutput)) {
+    theoutput <- theoutput %>% 
+      mutate(Magnitude = if_else(!is.na(Magnitude.RMSD),Magnitude.RMSD, 0))}
+  # make an output file name 
+  outname <- ouputpath
+  
+  print(theoutput)
+  # export
+  data.table::fwrite(theoutput,
+                     file = outname,
+                     showProgress = TRUE)
 }
