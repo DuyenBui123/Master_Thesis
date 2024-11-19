@@ -164,7 +164,7 @@ filter_time_series <- function(source, source_path, source2) {
               CloudMask %>% is.na() %>% mean() %>% round(digits = 4)))
   
   
-    #' Stop when not all y-coordinate values of InputSF 
+  #' Stop when not all y-coordinate values of InputSF 
   #' are equal to the y-coordinate values of the BlueMatrix (as defined by BlueY)
   #' If a directory is the input for source2, then remove cloud for NDVI dataset
   if (source2 != "none") { # read the NDVI data
@@ -199,4 +199,135 @@ filter_time_series <- function(source, source_path, source2) {
       # Replace all observations with the filtered observations from InputMatrix
       source[,grep("X20", colnames(source), ignore.case = T)] <- InputMatrix
       return(source)}
+}
+
+
+get_sampleid <-  function(data, output) {
+  outputname <- paste0(main_dir, output)
+  sample_id <- as.integer(data[, names(data) %in% c("sample_id")])
+  sample_id <- as.data.frame(sample_id)
+  colnames(sample_id) <- NULL
+  write.csv(sample_id, outputname)
+  return(sample_id)
+}
+
+
+getymd <- function(data, output) {
+  outputname_ymd <- paste0(main_dir, output)
+  drop <- c("sample_id","id")
+  data <- data[, !names(data) %in% drop]
+  date_ts <- colnames(data)
+  year_ts <- c()
+  for (index in 1:length(date_ts)) { year_ts <- append(year_ts,substring(date_ts[index], 1, 4))
+  }
+  year_ts_df <- as.data.frame(year_ts)
+  
+  
+  month_ts <- c()
+  for (index in 1:length(date_ts)) { month_ts <- append(month_ts,substring(date_ts[index], 6, 7))
+  }
+  month_ts_df <- as.data.frame(month_ts)
+  
+  
+  day_ts <- c()
+  for (index in 1:length(day_ts)) { day_ts <- append(day_ts,substring(date_ts[index], 9, 10))
+  }
+  day_ts_df <- as.data.frame(day_ts)
+  
+  date_ts_df <- cbind(year_ts_df, month_ts_df, day_ts_df)
+  colnames(date_ts_df) <- NULL
+  write.csv(date_ts_df, outputname_ymd)
+  return(date_ts_df)
+}
+
+
+getfracyear <- function(data, output) {
+  drop <- c("sample_id","id")
+  data <- data[, !names(data) %in% drop]
+  date_ts <- colnames(data)
+  date_ts <- sub('X','',date_ts)
+  date_ts <-  gsub("\\.", "-", date_ts, perl = TRUE)
+  t <- c()
+  for (index in 1:length(date_ts)) {
+    t <- append(t, sprintf("%.11f",decimal_date(as.POSIXlt(date_ts[index]))))
+  }
+  options(digits=11)
+  t <- as.numeric(t)
+  t <- as.data.frame(t)
+  colnames(t) <- NULL
+  outputname_t <- paste0(main_dir, output)
+  write.csv(t, outputname_t)
+  return(t)
+}
+
+
+trans_multi_SR <-  function(datafile) {
+  
+  params <- list(
+    preprocessing = list(
+      interpolate = FALSE,
+      seasonality = "")
+  )
+  # load an preprocess the input datafile 
+  l8ndvi <- prepL8NDVIdataframe(datafile)
+  
+  # prepare time series ------------------------------------------------------
+  
+  # get frequency table of acquisitions per year
+  tab <- getFreqTabByYear(datafile)
+  
+  # set the seasonality of the input time series
+  
+  if(!is.numeric(params$preprocessing$seasonality)){
+    # define the time series frequency by the minimum number of aquisitions in the time series
+    params$preprocessing$seasonality <- min(tab$Frequency[2:(length(tab$Frequency)-1)])
+  }
+  
+  # make list with timeseries (ts) objects 
+  print("Prepare time series list")
+  tslist <- pblapply(1:nrow(l8ndvi), 
+                     FUN = getTrimmedts, 
+                     dframe = l8ndvi, 
+                     lookuptable = tab, 
+                     tsfreq = params$preprocessing$seasonality, 
+                     interpolate = params$preprocessing$interpolate, 
+                     cl = mycores)
+  tslist_ori <- tslist
+  
+  ############### PROBLEM: ONLY SELECT THE COLUMNS IN TSLIST NOT USE ALL TS IN NDVI_CAL ORIGINAL BECAUSE THERE ARE MORE VALUE
+  
+  remov_index <- list()
+  diff_length <- list()
+  
+  for (sample_id_indx in 1:length(tslist)) {
+    sample_id_ts = tslist[[sample_id_indx]]
+    # Parameters
+    n <- 186      # Total number of observations
+    n.p <- 22     # Seasonal period (e.g., weekly data in a year)
+    
+    
+    # Generate cycle indices for the seasonal period
+    cycleSubIndices <- rep(1:n.p, ceiling(n / n.p))[1:n]
+    if (length(sample_id_ts) != 186) {
+      diff_length <- append(diff_length, sample_id_indx )
+      next
+    }
+    # Check for fully missing subseries
+    if (any(by(sample_id_ts, list(cycleSubIndices), function(x) all(is.na(x))))) {remov_index <- append(remov_index,sample_id_indx )
+    print("break")
+    next
+    
+    
+    }
+    NDVI_stlpl <- stlplus(sample_id_ts, n.p = 22,
+                          l.window = 23, t.window = 35, s.window = "periodic", s.degree = 1)
+    reconstruct_NDVI_stlpl <- seasonal(NDVI_stlpl) + trend(NDVI_stlpl)
+    tslist[[sample_id_indx]] <- ifelse(is.na(sample_id_ts), reconstruct_NDVI_stlpl, sample_id_ts)
+    
+  }
+  
+  tslist_filled <- tslist
+  tslist_filled_df <- do.call(rbind.data.frame, tslist_filled)
+  return(tslist_filled_df)
+  
 }
