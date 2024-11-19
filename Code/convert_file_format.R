@@ -2,6 +2,16 @@ install.packages("abind")
 library(abind)
 install.packages("R.matlab")
 library(R.matlab)
+install.packages("stlplus")
+library(stlplus)
+install.packages("TSstudio")
+library(TSstudio)
+library(sf)
+library(here)
+library(zoo)
+source("/home/duyen/Master_Thesis/GitHub_code/BFASTutils.R")
+source("/home/duyen/Master_Thesis/GitHub_code/getTrimmedts.R")
+source("/home/duyen/Master_Thesis/Code/Utils/Utils.R")
 setwd("/home/duyen/Master_Thesis/")
 # setting up the main directory
 main_dir <- "/home/duyen/Master_Thesis/Data/"
@@ -23,7 +33,7 @@ if (file.exists(sub_dir)){
   # specifying the working directory
   setwd(file.path(main_dir, sub_dir))
 }
-
+source(here("GitHub_code", "BFASTutils.R"))
 # Read the CALIBRATION set of satellite data 
 SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_cal.gpkg"
 # Read each name layer of the satellite data
@@ -61,6 +71,7 @@ sample_id <- as.integer(SR_df_id[[1]][, names(SR_df_id[[1]]) %in% c("sample_id")
 sample_id <- as.data.frame(sample_id)
 colnames(sample_id) <- NULL
 write.csv(sample_id, outputname)
+
 # Write SR
 
 OutFile = paste0(main_dir, "Data_DRMAT/SR_3D.Rdata")
@@ -70,12 +81,11 @@ SR_df <- lapply(SR,function(x) x <- x[, !names(x) %in% c("tile", "sample_id","ce
 
 SR_3D <- abind(SR_df[[2]], SR_df[[3]], SR_df[[4]], SR_df[[5]], SR_df[[6]], SR_df[[7]], along=3)
 SR_3D <- unname(SR_3D)
+dim(SR_3D)
+# Interpolate
+trans_SR_3D <- lapply(SR_3D, function (x) t(x))
 
-save(SR_3D,file = OutFile)
-
-saveRDS(SR_3D, file = OutFile_rds)
-SR_3D_rds <- readRDS(OutFile_rds)
-writeMat(OutFile_mat, a = SR_3D_rds)
+###################
 # write fractional year
 date_ts <- sub('X','',date_ts)
 date_ts <-  gsub("\\.", "-", date_ts, perl = TRUE)
@@ -91,5 +101,230 @@ outputname_t <- paste0(main_dir, "/Data_DRMAT/t.csv")
 write.csv(t, outputname_t)
 
 # write nivd
+pbo <- pboptions(type="timer")
+mycores <- detectCores()
+
+params <- list(
+  preprocessing = list(
+    interpolate = FALSE,
+    seasonality = "")
+)
+# load an preprocess the input datafile 
+l8ndvi <- prepL8NDVIdataframe("./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg")
+
+# prepare time series ------------------------------------------------------
+
+# get frequency table of acquisitions per year
+tab <- getFreqTabByYear("./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg")
+
+# set the seasonality of the input time series
+
+if(!is.numeric(params$preprocessing$seasonality)){
+  # define the time series frequency by the minimum number of aquisitions in the time series
+  params$preprocessing$seasonality <- min(tab$Frequency[2:(length(tab$Frequency)-1)])
+}
+
+# make list with timeseries (ts) objects 
+print("Prepare time series list")
+tslist <- pblapply(1:nrow(l8ndvi), 
+                   FUN = getTrimmedts, 
+                   dframe = l8ndvi, 
+                   lookuptable = tab, 
+                   tsfreq = params$preprocessing$seasonality, 
+                   interpolate = params$preprocessing$interpolate, 
+                   cl = mycores)
+tslist_ori <- tslist
+
+############### PROBLEM: ONLY SELECT THE COLUMNS IN TSLIST NOT USE ALL TS IN NDVI_CAL ORIGINAL BECAUSE THERE ARE MORE VALUE
+
+remov_index <- list()
+diff_length <- list()
+
+for (sample_id_indx in 1:length(tslist)) {
+  sample_id_ts = tslist[[sample_id_indx]]
+  # Parameters
+  n <- 186      # Total number of observations
+  n.p <- 22     # Seasonal period (e.g., weekly data in a year)
+  
+  
+  # Generate cycle indices for the seasonal period
+  cycleSubIndices <- rep(1:n.p, ceiling(n / n.p))[1:n]
+  if (length(sample_id_ts) != 186) {
+    diff_length <- append(diff_length, sample_id_indx )
+    next
+  }
+  # Check for fully missing subseries
+  if (any(by(sample_id_ts, list(cycleSubIndices), function(x) all(is.na(x))))) {remov_index <- append(remov_index,sample_id_indx )
+  print("break")
+  next
+  
+  
+  }
+  NDVI_stlpl <- stlplus(sample_id_ts, n.p = 22,
+                        l.window = 23, t.window = 35, s.window = "periodic", s.degree = 1)
+  reconstruct_NDVI_stlpl <- seasonal(NDVI_stlpl) + trend(NDVI_stlpl)
+  tslist[[sample_id_indx]] <- ifelse(is.na(sample_id_ts), reconstruct_NDVI_stlpl, sample_id_ts)
+  
+}
+
+tslist_filled <- tslist
+
+#replace NAs in the dataset with interpolated values
+
+test <- ts(tslist_spid2, start  = c(2013, 4), end = c(2021, 12), frequency = 22)
+ts.plot(test,tslist[[2]],
+        col = 2:1)
+
+# prepare the NDVI for DRMAT
+# assign sample id again to the tslist got interpolated
+tslist_filled_df <- do.call(rbind.data.frame, tslist_filled)
+tslist_filled_df <- cbind(tslist_filled_df, sample_id = l8ndvi$sample_id)
+tslist_filled_df$id <- seq.int(nrow(tslist_filled_df))
+# remove the sample id that could not be interpolated
+tslist_filled_df_rm <- tslist_filled_df[(!tslist_filled_df$id %in% c(remov_index, diff_length)),]
+nrow(tslist_filled_df_rm)
+length(remove_sampleid_comb)
+
+# prepare sample id, time, ymd for DRMAT
+sample_id_ndvi_cal <- get_sampleid(tslist_filled_df_rm, "Data_DRMAT/id_ndvi_cal.csv")
+ymd_ndvi_cal <- getymd(tslist_filled_df_rm, "Data_DRMAT/ymd_ndvi_cal.csv" )
+t_ndvi_cal <- getfracyear(tslist_filled_df_rm, "Data_DRMAT/t_ndvi_cal.csv")
+drop <- c("sample_id","id")
+tslist_filled_df <- tslist_filled_df[, !names(tslist_filled_df) %in% drop]
+outputname_ndvi_cal <- paste0(main_dir, "Data_DRMAT/ndvi_cal.csv")
+write.csv(tslist_filled_df, outputname_ndvi_cal)
+
+############################## PREPARE DATA FOR SR CAL##########################
+# Read the CALIBRATION set of satellite data 
+SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_cal.gpkg"
+# Read each name layer of the satellite data
+SRNames = st_layers(SR_GPKG)$name
+SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
+# Remove geom column from the dataset
+SR_nogeom <- lapply(SR, function(x) sf::st_drop_geometry(x))
+# Run BFAST Lite on the dataset
+for (layer in seq_along(SR)) {
+  band_filled <- trans_multi_SR(SR_nogeom[[layer]])
+  band_filled <- data.frame(cbind(band_filled, sample_id = SR[[layer]]$sample_id))
+  # Write the output of BFAST lite
+  OutFile = paste0(main_dir, "Data_DRMAT/SR_cal_filled.gpkg")
+  
+  st_write(band_filled, dsn = OutFile, layer = SRNames[layer])
+  
+}
 
 
+
+SR_GPKG_filled = "./Data/Data_DRMAT/SR_cal_filled.gpkg"
+OutFile = paste0(main_dir, "Data_DRMAT/SR_3D.Rdata")
+SR_filled = lapply(SRNames, function(name) st_read(SR_GPKG_filled, layer=name))
+
+# remove the sample id that could not be interpolated
+SR_filled <- lapply(SR_filled, function(x) {
+  # Ensure x is a data frame before proceeding
+  if (is.data.frame(x)) {
+    x$id <- seq.int(nrow(x))  # Add sequential id column
+    x <- x[!x$id %in% c(remov_index, diff_length), ]  # Remove unwanted rows
+    drop <- c("sample_id","id")
+    x <- x[, !names(x) %in% drop]
+  }
+  return(x)  # Return the modified data frame
+})
+
+library(abind)
+SR_filled_3D <- abind(SR_filled[[2]], SR_filled[[3]], SR_filled[[4]], SR_filled[[5]], SR_filled[[6]], SR_filled[[7]], along=3)
+SR_3D <- unname(SR_3D)
+write.csv(SR_filled_3D, paste0(main_dir, "Data_DRMAT/SR_3d_cal_filled.gpkg"))
+
+test <- read.csv(paste0(main_dir, "Data_DRMAT/SR_3d_cal_filled.gpkg"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# set.seed(42)  # For reproducibility
+# length(tslist[[5]])
+# ts_select_1 <- window(tslist[[3]], start = 2014, end = 2020, frequency = 22)
+# length(ts_select_1)
+# # Parameters
+# n <- 133      # Total number of observations
+# n.p <- 22     # Seasonal period (e.g., weekly data in a year)
+# 
+# # Generate a vector with a high proportion of NA
+# Y <- sample(c(NA, rnorm(1, mean = 50, sd = 10)), size = n, replace = TRUE, prob = c(0.85, 0.15))
+# Y
+# 
+# # Generate cycle indices for the seasonal period
+# cycleSubIndices <- rep(1:n.p, ceiling(n / n.p))[1:n]
+# 
+# # Check for fully missing subseries
+# if (any(by(ts_select_1, list(cycleSubIndices), function(x) all(is.na(x))))) {
+#   stop("There is at least one subseries for which all values are missing.")
+# }
+# length(ts_select_1)
+# # Print results
+# print("Generated Y:")
+# print(Y)
+# 
+# print("Cycle Sub Indices:")
+# print(cycleSubIndices)
+# 
+# print("Subseries grouped by cycle indices:")
+# print(by(ts_select_1, list(cycleSubIndices), function(x) x))
+# 
+# # Define cycleSubIndices
+# cycleSubIndices <- rep(1:n.p, ceiling(length(ts_select_1) / n.p))[1:length(ts_select_1)]
+# 
+# # Identify subseries with all NA values and print the subseries values
+# missing_subseries <- by(ts_select_1, list(cycleSubIndices), function(x) {
+#   
+#   # Print the subseries being inspected
+#   cat("Inspecting subseries:\n")
+#   print(x)
+#   
+#   # Check if all values are NA
+#   return(all(is.na(x)))
+# })
+# 
+# # Check which subseries have all NA values and print their indices
+# subseries_with_na <- which(missing_subseries)  # Returns the indices of subseries with all NA values
+# 
+# # If there are subseries with all NA, print their indices
+# if (length(subseries_with_na) > 0) {
+#   cat("The following subseries contain all missing data (NA):\n")
+#   print(subseries_with_na)
+# } else {
+#   cat("No subseries contain all missing data (NA).")
+# }
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
