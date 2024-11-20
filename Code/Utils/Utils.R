@@ -327,7 +327,8 @@ trans_multi_SR <-  function(datafile) {
   }
   
   tslist_filled <- tslist
-  tslist_filled_df <- do.call(rbind.data.frame, tslist_filled)
-  return(tslist_filled_df)
+  mylist <- list("origin" = tslist_ori, "filled" = tslist_filled)
+  
+  return(mylist)
   
 }
