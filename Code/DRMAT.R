@@ -40,3 +40,10 @@ list_of_cal <- rbind( bp_BIC_00005 = bp_BIC_00005,bp_BIC_0001 = bp_BIC_0001, bp_
                       bp_AIC_00005 = bp_AIC_00005, bp_AIC_0005 = bp_AIC_0005, bp_AIC_0001 =bp_AIC_0001,
                       bp_AIC_001 = bp_AIC_001, bp_AIC_01 = bp_AIC_01, bp_HQC_00005 = bp_HQC_00005,
                       bp_HQC_0005 = bp_HQC_0005, bp_HQC_0001 =bp_HQC_0001, bp_HQC_001 =bp_HQC_001, bp_HQC_01 =bp_HQC_01)
+
+write.csv(list_of_cal, "./Intermediate product/cloud_free_product/_output_DRMAT_SR_cal.csv" )
+bp_HQC_0001_ndvi <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_0001_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_HQC_0001_ndvi.txt")
+bp_AIC_0001_ndvi <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_0001_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_AIC_0001_ndvi.txt")
+bp_BIC_0001_ndvi <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_0001_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_BIC_0001_ndvi.txt")
+list_of_cal_ndvi <- rbind(bp_HQC_0001_ndvi = bp_HQC_0001_ndvi, bp_AIC_0001_ndvi = bp_AIC_0001_ndvi, bp_BIC_0001_ndvi = bp_BIC_0001_ndvi )
+write.csv(list_of_cal_ndvi, "./Intermediate product/cloud_free_product/_output_DRMAT_ndvi_cal.csv" )
