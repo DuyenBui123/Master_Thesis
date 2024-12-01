@@ -7,7 +7,9 @@
 #' Project:          Thesis: Compare the performance of multivariate and univariate time series models in detecting global land cover change
 #' Supervisors:      Dainius Masiliunas & Nandin-Erdene Tsendbazar
 #'
-#' Script to calculate number TP, TN, FP, and FN for NDVI, and Satellite image dataset. The metrics such as F1 score, precision, and sensitivity are caculated.
+#' Script to interpolate missing data for ndvi and SR using stplus and linear interpolation
+#' to convert data to the write format for DRMAT
+#' to plot numbers of consecutive nan scenario
 #'
 #'_____________________________________________________________________
 # load packages
