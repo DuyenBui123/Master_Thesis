@@ -201,52 +201,75 @@ filter_time_series <- function(source, source_path, source2) {
       return(source)}
 }
 
+# This function used to create a sample id dataframe and save it as a csv
+#' 
+#' @param data  a dataframe that contains sample id column
+#' @param outut a directory path including the name of output file
 
+#' @return the sample id dataframe
 get_sampleid <-  function(data, output) {
   outputname <- paste0(main_dir, output)
+  # select only sample id column and convert to integer
   sample_id <- as.integer(data[, names(data) %in% c("sample_id")])
+  # convert to dataframe
   sample_id <- as.data.frame(sample_id)
   colnames(sample_id) <- NULL
   write.csv(sample_id, outputname)
   return(sample_id)
 }
 
+# This function used to create a year month date dataframe of the time series dates and save it as a csv
+#' 
+#' @param data  a dataframe that contains at list all the ts dates column. The format of the column names should be X.xxxx.xx.xx
+#' @param outut a directory path including the name of output file
 
+#' @return the ymd dataframe
 getymd <- function(data, output) {
   outputname_ymd <- paste0(main_dir, output)
+  # drop all columns that not dates
   drop <- c("sample_id","id")
   data <- data[, !names(data) %in% drop]
+  # extract date names
   date_ts <- colnames(data)
+  # extract year
   year_ts <- c()
   for (index in 1:length(date_ts)) { year_ts <- append(year_ts,substring(date_ts[index], 1, 4))
   }
   year_ts_df <- as.data.frame(year_ts)
   
-  
+  # extract month
   month_ts <- c()
   for (index in 1:length(date_ts)) { month_ts <- append(month_ts,substring(date_ts[index], 6, 7))
   }
   month_ts_df <- as.data.frame(month_ts)
   
-  
+  # extract day
   day_ts <- c()
   for (index in 1:length(day_ts)) { day_ts <- append(day_ts,substring(date_ts[index], 9, 10))
   }
   day_ts_df <- as.data.frame(day_ts)
-  
+  # combine year, month, day
   date_ts_df <- cbind(year_ts_df, month_ts_df, day_ts_df)
   colnames(date_ts_df) <- NULL
   write.csv(date_ts_df, outputname_ymd)
   return(date_ts_df)
 }
 
+# This function used to create year fraction for each ts date and save it as a csv
+#' 
+#' @param data  a dataframe that contains at list all the ts dates column. The format of the column names should be X.xxxx.xx.xx
+#' @param outut a directory path including the name of output file
 
+#' @return the year fraction dataframe
 getfracyear <- function(data, output) {
   drop <- c("sample_id","id")
   data <- data[, !names(data) %in% drop]
   date_ts <- colnames(data)
+  # remove the leter X with an empty space
   date_ts <- sub('X','',date_ts)
+  # replace all "." to "-"
   date_ts <-  gsub("\\.", "-", date_ts, perl = TRUE)
+  # convert year-month-day to year fraction
   t <- c()
   for (index in 1:length(date_ts)) {
     t <- append(t, sprintf("%.11f",decimal_date(as.POSIXlt(date_ts[index]))))
@@ -261,74 +284,3 @@ getfracyear <- function(data, output) {
 }
 
 
-trans_multi_SR <-  function(datafile) {
-  
-  params <- list(
-    preprocessing = list(
-      interpolate = FALSE,
-      seasonality = "")
-  )
-  # load an preprocess the input datafile 
-  l8ndvi <- prepL8NDVIdataframe(datafile)
-  
-  # prepare time series ------------------------------------------------------
-  
-  # get frequency table of acquisitions per year
-  tab <- getFreqTabByYear(datafile)
-  
-  # set the seasonality of the input time series
-  
-  if(!is.numeric(params$preprocessing$seasonality)){
-    # define the time series frequency by the minimum number of aquisitions in the time series
-    params$preprocessing$seasonality <- min(tab$Frequency[2:(length(tab$Frequency)-1)])
-  }
-  
-  # make list with timeseries (ts) objects 
-  print("Prepare time series list")
-  tslist <- pblapply(1:nrow(l8ndvi), 
-                     FUN = getTrimmedts, 
-                     dframe = l8ndvi, 
-                     lookuptable = tab, 
-                     tsfreq = params$preprocessing$seasonality, 
-                     interpolate = params$preprocessing$interpolate, 
-                     cl = mycores)
-  tslist_ori <- tslist
-  
-  ############### PROBLEM: ONLY SELECT THE COLUMNS IN TSLIST NOT USE ALL TS IN NDVI_CAL ORIGINAL BECAUSE THERE ARE MORE VALUE
-  
-  remov_index <- list()
-  diff_length <- list()
-  
-  for (sample_id_indx in 1:length(tslist)) {
-    sample_id_ts = tslist[[sample_id_indx]]
-    # Parameters
-    n <- 186      # Total number of observations
-    n.p <- 22     # Seasonal period (e.g., weekly data in a year)
-    
-    
-    # Generate cycle indices for the seasonal period
-    cycleSubIndices <- rep(1:n.p, ceiling(n / n.p))[1:n]
-    if (length(sample_id_ts) != 186) {
-      diff_length <- append(diff_length, sample_id_indx )
-      next
-    }
-    # Check for fully missing subseries
-    if (any(by(sample_id_ts, list(cycleSubIndices), function(x) all(is.na(x))))) {remov_index <- append(remov_index,sample_id_indx )
-    print("break")
-    next
-    
-    
-    }
-    NDVI_stlpl <- stlplus(sample_id_ts, n.p = 22,
-                          l.window = 23, t.window = 35, s.window = "periodic", s.degree = 1)
-    reconstruct_NDVI_stlpl <- seasonal(NDVI_stlpl) + trend(NDVI_stlpl)
-    tslist[[sample_id_indx]] <- ifelse(is.na(sample_id_ts), reconstruct_NDVI_stlpl, sample_id_ts)
-    
-  }
-  
-  tslist_filled <- tslist
-  mylist <- list("origin" = tslist_ori, "filled" = tslist_filled)
-  
-  return(mylist)
-  
-}
