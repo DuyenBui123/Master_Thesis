@@ -195,7 +195,8 @@ def_conse = conse;
 Tmax_cg = chi2inv(Tmax_cg,length(B_detect));
 % adjust threshold based on chi-squared distribution
 def_pT_cg = T_cg;
-def_T_cg = chi2inv(def_pT_cg,length(B_detect));
+def_T_cg = chi2inv(def_pT_cg,length(B_detect)); %Find the 0.99th percentile for the chi-square distribution with 6 degrees of freedom. 
+                                                %If you generate random numbers from this chi-square distribution, you would observe numbers greater than 16.8119 only 0.1% of the time.
 
 % initialize the struct data of RECording of ChanGe (rec_cg)
 rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...

@@ -1,4 +1,4 @@
-function main_COLD_ori(task,ntasks)
+function main_COLD(task,ntasks)
 % Matlab code for Continous Change Detection (for standalone version)
 % Inputs:
 % T_cg:   change probability threshold
@@ -48,8 +48,8 @@ Tmax_cg = 1-1e-5;
 imf=dir('L*'); % folder names
 imf(~[imf.isdir]) = []; % only directory
 %[nrows,ncols,nbands,~,~,~,num_imgs] = autoPara(imf); % ~ (Placeholder):    The tilde (~) is used to ignore output arguments that are not needed. In this context, there are three unused values after nbands that the function or operation returns, but the script chooses to disregard them.
-nrows = 5000
-ncols = 5000
+nrows = 186
+ncols = 1
 nbands = 6
 num_imgs = 1
 % folder name of all CCDC results 
@@ -178,21 +178,14 @@ end
 % irows(irows < line_start) = [];
 % irows(irows > line_end) = [];
 
-for i = 1:length(irows)
-    % Check whether record_change already exist for row == i
-    try
-        % if successfully loaded => skip
-        load([dir_l,'/',name_rst,'/','record_change',sprintf('%d',irows(i)),'.mat']); %#ok<LOAD>
-    catch me %#ok<NASGU>
-        % not exist or corrupt
-        % fprintf('Processing the %dth row\n',irows(i)); 
-        TrendSeasonalFit_COLDLine_ori(dir_l,name_rst,ncols,irows(i),T_cg,Tmax_cg,conse,max_c,nbands,B_detect);
+
+        TrendSeasonalFit_COLDLine(dir_l,name_rst,ncols,T_cg,Tmax_cg,conse,max_c,nbands,B_detect);
         % TrendSeasonalFit_PRLine(dir_l,name_rst,ncols,irows(i),T_cg,Tmax_cg,conse,max_c,nbands,B_detect);
         % Continous Change Detection Done for a line of timeseries pixels
         % TrendSeasonalFit_v12_30ARDLine(dir_l,name_rst,ncols,irows(i),T_cg,Tmax_cg,conse,max_c,nbands,B_detect);
         % TrendSeasonalFit_v12_30Line(dir_l,name_rst,ncols,irows(i),T_cg,Tmax_cg,conse,max_c,nbands,B_detect);
-    end
-end
+    
+
 
 % profile viewer
 % exit
