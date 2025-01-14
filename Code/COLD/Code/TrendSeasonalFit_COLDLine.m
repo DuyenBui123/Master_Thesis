@@ -242,6 +242,10 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
     stack = reshape(data, [rows_stack, cols_stack, nbands]);
     nrows = 1:11773;
     %%%%%% LOOP THROUGH EACH SAMPLE SITE
+    % Reshape the dimension of the data. from 11773*186 with 11773 is each
+    % row to each observation. Now each observation is loop and convert to
+    % 186*1. Do the same for all the bands, so in the end we have for each
+    % observation 186*6.
     for i_nrows =  1:length(nrows)
         %line_t = zeros(cols_stack, nbands);
         id_band1 = stack(i_nrows,:,1);
