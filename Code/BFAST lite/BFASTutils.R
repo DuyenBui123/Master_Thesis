@@ -1,15 +1,27 @@
 # load packages
 if (!require("pacman")) install.packages("pacman"); library(pacman)
-p_load(here, bfast, strucchangeRcpp)
+p_load(here, lubridate)#, bfast, strucchangeRcpp)
 
 #source utils 
-source(here("GitHub_code", "Utils.R"))
-library(strucchangeRcpp)
-library(bfast)
-source(here("GitHub_code/cglops-change-detection/src/utils/enable_fast_bfast.r"))
-source(here("GitHub_code/cglops-change-detection/src/bfast-cal/plotting.r"))
-
-
+source("/home/duyen/Master_Thesis/GitHub_code/Utils.R")
+# library(strucchangeRcpp)
+# library(bfast)
+source("/home/duyen/Master_Thesis/GitHub_code/cglops-change-detection/src/utils/enable_fast_bfast.r")
+source("/home/duyen/Master_Thesis/GitHub_code/cglops-change-detection/src/bfast-cal/plotting.r")
+# debugSource(here("GitHub_code", "bfast", "R", "bfastpp.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "breakpoints.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "Fstats.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "RcppExports.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "critvals-monitoring.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "critvals.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "efp.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "gefp.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "matrix.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "monitoring.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "pvalue.Fstats.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "recresid.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "simul-monitoring.R"))
+# debugSource(here("GitHub_code", "strucchangeRcpp", "R", "zzz.R"))
 #' Functions in this script are adapted from '02-detectbreaks.r' by Dainius Masiliunas, 
 #' at: https://github.com/GreatEmerald/cglops-change-detection/blob/master/src/bfast-cal/02-detectbreaks.r#L32
 
@@ -113,6 +125,8 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
                           formula=response ~ harmon + trend, TargetYears=NULL,
                           seasonfreq=0.5, breaknumthreshold=Inf, altformula=NULL, ...)
 {
+  
+  
   # The input should be a single row of a matrix.
   if (!is.ts(InputTS)){
     InputTS <- GetTS(InputTS)} # Convert into a ts object
@@ -133,10 +147,12 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
     
     # Fix season when it's not an integer
     myseason <- as.numeric(as.character(bpp$season)) # Deparse season again
+    print(bpp$season)
     
     if (!all(is.na(myseason))){
       # If we failed to deparse, then we're using a fixed bfastpp already, no need to do anything
       bpp$season <- cut(myseason, frequency(InputTS)*seasonfreq, ordered_result = TRUE) # Rebin all
+      print(bpp$season)
     } 
     
     # # Run the sctest first to determine whether to run bfastlite
@@ -151,8 +167,9 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
     #' Break was detected, so run bfastlite
     #' Run bfastlite using the forumula, the pre-processed regressions curves from `bpp`
     #' and h, the number of observations per year
-    bp <- try(breakpoints(formula, data=bpp, h=h))
-    
+    bp <- try(strucchangeRcpp:::breakpoints(formula, data=bpp, h=h))
+    # extract prediction value for the whole ts
+    bp_pred <- strucchangeRcpp:::breakpoints_pred.formula(formula, data=bpp, h=h)
     if ("try-error" %in% class(bp)) {
       print("An error has occurred:")
       print(bp)
@@ -161,8 +178,48 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
     
     #' now, obtain the timing of the breakpoints, 
     #' using the information criterion of `breaks`, which is `"LWZ"` by default
-    bpOptim <- breakpoints(bp, breaks=breaks) # Get breakpoint time
+    bpOptim <- strucchangeRcpp:::breakpoints(bp, breaks=breaks) # Get breakpoint time
     
+    # # adding rmse for each segment right before the breakpoints
+    n <- bpOptim$nobs # number of observation after prepared by bpp func
+    # check whether there is any break
+    if(any(is.na(bpOptim$breakpoints))) { # if no break, only add the start and end of the ts
+      nbp <- 0
+      bp_rmse <- c(0, n)
+    } else { # if there are breaks, add start and end obs to create complete segments of a ts
+      nbp <- length(bpOptim$breakpoints)
+      bp_rmse <- c(0, bpOptim$breakpoints, n)
+    }
+    num_yrs <- 365.25 # determine number of days per year including leap years
+    rmse <- c()
+    
+    if (length(bp_rmse) >2) { for (nrb  in 1: (length(bp_rmse)-2)) { segment <- bp_rmse[nrb]+1 : bp_rmse[nrb+1]-1
+                                                                    # if the segment length is larger than 22 then calculate a temporal rmse
+                                                                    if (length(segment) > 22) { segment_w_bp <- bp_rmse[nrb]+1 : bp_rmse[nrb+1]
+                                                                    RSS_priorseg <- bp$RSS(bp_rmse[nrb]+1, bp_rmse[nrb+1]-1)
+                                                                    datetime_seg <- bpp$datetime[segment_w_bp]
+                                                                    datetime_seg <- gsub('-', '', datetime_seg)
+                                                                    datetime_seg <- as.Date(datetime_seg, format="%Y%m%d")
+                                                                    jul_date_seg <- yday(datetime_seg)
+                                                                    d_rt <- jul_date_seg[1:NROW(jul_date_seg)] - jul_date_seg[NROW(jul_date_seg)]
+                                                                    d_yr <- abs(round(d_rt/num_yrs)*num_yrs-d_rt)
+                                                                    d_yr_sort <- order(d_yr[1:NROW(d_yr)-1])
+                                                                    d_yr_selec <-  d_yr_sort[1:22]
+                                                                    pred_seg <- bp_pred[d_yr_selec]
+                                                                    act_seg <- bp$y[d_yr_selec]
+                                                                    rmse_tem <- sqrt(sum((pred_seg - act_seg)^2))/sqrt(22-8)
+                                                                    rmse <- c(rmse_tem,rmse)
+                                                                   } else { # if the segment length is smaller than 22 then calculate a normal rmse
+                                                                      RSS_priorseg <- bp$RSS(segment)
+                                                                      RMSE_priorseg <- sqrt(RSS_priorseg/length(segment))
+                                                                      rmse <- c(RMSE_priorseg, rmse)
+                                                                    }
+                                                                    }
+    }
+    # calculate adjusted root mean square error - predefined minimun rmse
+    adj_rmse <- 
+    var_y <- bp$y[2:NROW(bp$y)] - bp$y[1:NROW(bp$y)-1]
+    adj_rmse <- median(abs(var_y), 1)
     # get the Rsquared 
     rsquared <- bpOptim$r.squared
     
@@ -477,7 +534,7 @@ cal_BFAST <- function( breaks, magthreshold, formula, magcomponent, coefcomponen
       mutate(Magnitude = if_else(!is.na(Magnitude.RMSD),Magnitude.RMSD, 0))}
   if ("tile" %in% colnames(validating_data_path)) {return(theoutput)} else {
     # make an output file name 
-    outname <- ouputpath
+    outname <- output_path
     
     
     # export
@@ -490,31 +547,7 @@ cal_BFAST <- function( breaks, magthreshold, formula, magcomponent, coefcomponen
 }
 # This function used to write the output after running the dataset on BFAST lite. This fuction only
 writeoutput <- function(outputbfast, ouputpath) {
-  # join sample ids and centroid coordinates to the BFAST Monitor output
-  print("Join output to sample ID information")
-  theoutput <- pblapply(1:length(outputbfast), 
-                        FUN = joinOutput, 
-                        algo_list = outputbfast, 
-                        dfids = l8ndvi, 
-                        cl = mycores)
   
-  # concatenate all 1-row data.frames into one large data.frame
-  theoutput <- data.table::rbindlist(theoutput, fill = TRUE)
-  
-  # add prediction ids to each prediction. 
-  theoutput <- theoutput %>% 
-    group_by(sample_id) %>% 
-    mutate(pred_id = row_number()*10) %>% 
-    as.data.frame()
-  
-  
-  
-  #' if there is a magnitude to report, 
-  #' fill the Magnitude column with "Mangitude.before"
-  if ("Magnitude.before" %in% colnames(theoutput)) {
-    theoutput <- theoutput %>% 
-      mutate(Magnitude = if_else(!is.na(Magnitude.RMSD),Magnitude.RMSD, 0))}
-  # make an output file name 
   outname <- ouputpath
   
   print(theoutput)
