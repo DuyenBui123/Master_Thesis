@@ -147,12 +147,12 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
     
     # Fix season when it's not an integer
     myseason <- as.numeric(as.character(bpp$season)) # Deparse season again
-    print(bpp$season)
+    
     
     if (!all(is.na(myseason))){
       # If we failed to deparse, then we're using a fixed bfastpp already, no need to do anything
       bpp$season <- cut(myseason, frequency(InputTS)*seasonfreq, ordered_result = TRUE) # Rebin all
-      print(bpp$season)
+      
     } 
     
     # # Run the sctest first to determine whether to run bfastlite
@@ -190,36 +190,52 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
       nbp <- length(bpOptim$breakpoints)
       bp_rmse <- c(0, bpOptim$breakpoints, n)
     }
+    # calculate adjusted root mean square error - predefined minimun rmse
+    var_y <- bp$y[2:NROW(bp$y)] - bp$y[1:NROW(bp$y)-1]
+    adj_rmse <- median(abs(var_y), 1)
     num_yrs <- 365.25 # determine number of days per year including leap years
     rmse <- c()
     
-    if (length(bp_rmse) >2) { for (nrb  in 1: (length(bp_rmse)-2)) { segment <- bp_rmse[nrb]+1 : bp_rmse[nrb+1]-1
-                                                                    # if the segment length is larger than 22 then calculate a temporal rmse
-                                                                    if (length(segment) > 22) { segment_w_bp <- bp_rmse[nrb]+1 : bp_rmse[nrb+1]
-                                                                    RSS_priorseg <- bp$RSS(bp_rmse[nrb]+1, bp_rmse[nrb+1]-1)
-                                                                    datetime_seg <- bpp$datetime[segment_w_bp]
-                                                                    datetime_seg <- gsub('-', '', datetime_seg)
-                                                                    datetime_seg <- as.Date(datetime_seg, format="%Y%m%d")
-                                                                    jul_date_seg <- yday(datetime_seg)
-                                                                    d_rt <- jul_date_seg[1:NROW(jul_date_seg)] - jul_date_seg[NROW(jul_date_seg)]
-                                                                    d_yr <- abs(round(d_rt/num_yrs)*num_yrs-d_rt)
-                                                                    d_yr_sort <- order(d_yr[1:NROW(d_yr)-1])
-                                                                    d_yr_selec <-  d_yr_sort[1:22]
-                                                                    pred_seg <- bp_pred[d_yr_selec]
-                                                                    act_seg <- bp$y[d_yr_selec]
-                                                                    rmse_tem <- sqrt(sum((pred_seg - act_seg)^2))/sqrt(22-8)
-                                                                    rmse <- c(rmse_tem,rmse)
-                                                                   } else { # if the segment length is smaller than 22 then calculate a normal rmse
-                                                                      RSS_priorseg <- bp$RSS(segment)
-                                                                      RMSE_priorseg <- sqrt(RSS_priorseg/length(segment))
-                                                                      rmse <- c(RMSE_priorseg, rmse)
-                                                                    }
-                                                                    }
+    if (length(bp_rmse) >2) { 
+      for (nrb  in 1: (length(bp_rmse)-2)) { 
+        segment <- bp_rmse[nrb]+1 : bp_rmse[nrb+1]-1
+        # if the segment length is larger than 22 then calculate a temporal rmse
+        if (length(segment) > 24) { segment_w_bp <- bp_rmse[nrb]+1 : bp_rmse[nrb+1]
+        RSS_priorseg <- bp$RSS(bp_rmse[nrb]+1, bp_rmse[nrb+1]-1)
+        datetime_seg <- bpp$datetime[segment_w_bp]
+        datetime_seg <- gsub('-', '', datetime_seg)
+        datetime_seg <- as.Date(datetime_seg, format="%Y%m%d")
+        jul_date_seg <- yday(datetime_seg)
+        d_rt <- jul_date_seg[1:NROW(jul_date_seg)] - jul_date_seg[NROW(jul_date_seg)]
+        d_yr <- abs(round(d_rt/num_yrs)*num_yrs-d_rt)
+        d_yr_sort <- order(d_yr[1:NROW(d_yr)-1])
+        d_yr_selec <-  d_yr_sort[1:24]
+        pred_seg <- bp_pred[d_yr_selec]
+        act_seg <- bp$y[d_yr_selec]
+        rmse_tem <- sqrt(sum((pred_seg - act_seg)^2))/sqrt(24-8)
+        rmse <- c(rmse_tem,rmse)
+        } else { # if the segment length is smaller than 22 then calculate a normal rmse
+          
+          RSS_priorseg <- bp$RSS(bp_rmse[nrb]+1, bp_rmse[nrb+1]-1)
+          RMSE_priorseg <- sqrt(RSS_priorseg/length(segment))
+          rmse <- c(RMSE_priorseg, rmse)
+        }
+        
+      }
+      # save date time for breakpoints
+      bp_datetime <- c()
+      # calculate change vector magnitude for each break
+      vec_change <- c()
+      for (break_nr in 1:(length(bp_rmse)-2)) {
+        # get the minimun RMSE
+        final_rmse <- max(rmse[break_nr], adj_rmse)
+        vec_change <- c(abs(bp_pred[bpOptim$breakpoints[break_nr]] - bp$y[[bpOptim$breakpoints[break_nr]]])/final_rmse, vec_change)
+        bp_datetime <- c(bpp$datetime[bpOptim$breakpoints[break_nr]], bp_datetime)
+      }
     }
-    # calculate adjusted root mean square error - predefined minimun rmse
-    adj_rmse <- 
-    var_y <- bp$y[2:NROW(bp$y)] - bp$y[1:NROW(bp$y)-1]
-    adj_rmse <- median(abs(var_y), 1)
+    
+    
+    
     # get the Rsquared 
     rsquared <- bpOptim$r.squared
     
@@ -260,14 +276,23 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
       print(paste("Differences in coefficients of", coefcomponent))
       print(bpCoef)
     }
-    
-    # Convert the output into dates of break
-    Result <- data.frame("Breakpoint" = bpp[bpOptim$breakpoints, "time"], 
-                         "Magnitude" = bpMag, # Now all output of bpMag will be included in a new column
-                         # and appended to the "Magnitude"-label automatically, 
-                         # in case you want to output only 
-                         # selected magnitude results, use column indexing, like: bpMag[,3]
-                         "Coefficients" = bpCoef, "Rsq" = rsquared) 
+    if (length(vec_change) > 0) {
+      # Convert the output into dates of break
+      Result <- data.frame("Breakpoint" = bpp[bpOptim$breakpoints, "time"], 
+                           "Magnitude" = bpMag, # Now all output of bpMag will be included in a new column
+                           # and appended to the "Magnitude"-label automatically, 
+                           # in case you want to output only 
+                           # selected magnitude results, use column indexing, like: bpMag[,3]
+                           "Coefficients" = bpCoef, "Rsq" = rsquared, "vecmag" = vec_change, "datetime" = bp_datetime) 
+    } else {
+      # Convert the output into dates of break
+      Result <- data.frame("Breakpoint" = bpp[bpOptim$breakpoints, "time"], 
+                           "Magnitude" = bpMag, # Now all output of bpMag will be included in a new column
+                           # and appended to the "Magnitude"-label automatically, 
+                           # in case you want to output only 
+                           # selected magnitude results, use column indexing, like: bpMag[,3]
+                           "Coefficients" = bpCoef, "Rsq" = rsquared, "vecmag" = NA, "datetime" =  NA) 
+    }
     
     if (!is.null(bpMag) && !is.null(bpCoef)){
       # Keep breakpoints that are above the threshold of magnitude
@@ -276,6 +301,8 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
       CoefFilter <- bpCoef < min(coefthresholds) | bpCoef > max(coefthresholds)
       Result <- Result[MagFilter & CoefFilter]
       Result$Rsq <- rsquared
+      Result$vecmag <- vec_change
+      
       #' The current code using the indexing of Result,
       #' might snap if more than one break is found.In that case, 
       #' try to select a column in the Magnitude output, like here below: 
@@ -285,7 +312,7 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
       #           "Coefficients" = bpCoef[CoefFilter])
     }
     if (length(Result) < 1){
-      return(Result <- data.frame("Breakpoint" = NA, "Magnitude" = NA, "Coefficients" = NA, "Rsq" = NA))} # If we filtered out all results, return FALSE again
+      return(Result <- data.frame("Breakpoint" = NA, "Magnitude" = NA, "Coefficients" = NA, "Rsq" = NA, "vegmag" = NA))} # If we filtered out all results, return FALSE again
     if (plot){ # For ones that got kept, plot black on top
       abline(v=Result, col="black")}
     return(Result)
@@ -293,10 +320,50 @@ UseBFASTLite <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
   } else {
     if (!quiet){
       print("too cloudy")}
-    return(Result <- data.frame("Breakpoint" = NA, "Magnitude" = NA, "Coefficients" = NA, "Rsq" = NA))
+    return(Result <- data.frame("Breakpoint" = NA, "Magnitude" = NA, "Coefficients" = NA, "Rsq" = NA, "vegmag" = NA))
   }
 }
 
+UseBFASTLite_datetime <-  function(InputTS, scrange=NULL, scsig=0.05, breaks="LWZ",
+                                   sctype="OLS-MOSUM", maginterval=0.1, magcomponent="trend",
+                                   magstat="RMSD", magthreshold=-Inf, coefcomponent="trend",
+                                   coefthresholds=c(0, 0), plot=FALSE, quiet=FALSE, order=3,
+                                   formula=response ~ harmon + trend, TargetYears=NULL,
+                                   seasonfreq=0.5, breaknumthreshold=Inf, altformula=NULL, ...)
+{
+  
+  
+  # The input should be a single row of a matrix.
+  if (!is.ts(InputTS)){
+    InputTS <- GetTS(InputTS)} # Convert into a ts object
+  
+  # define the total number of valid (non-NA) observations
+  Observations <- sum(!is.na(InputTS))
+  
+  if (!quiet){
+    print(paste("Observations for point:", Observations))}
+  
+  # Set h to number of observations per year, i.e. frequency of time series
+  h <- ceiling(frequency(InputTS)) 
+  
+  # if the total number of observations is higher than two times the number of observations per year,
+  # we start pre-processing, otherwise we say the time-series contains too much clouds. 
+  if (Observations > h*2) {
+    bpp <- bfastpp(InputTS, order=order, sbins=seasonfreq) # Preprocess the ts into a data.frame
+    
+    # Fix season when it's not an integer
+    myseason <- as.numeric(as.character(bpp$season)) # Deparse season again
+    
+    
+    if (!all(is.na(myseason))){
+      # If we failed to deparse, then we're using a fixed bfastpp already, no need to do anything
+      bpp$season <- cut(myseason, frequency(InputTS)*seasonfreq, ordered_result = TRUE) # Rebin all
+      
+    }
+    return(bpp$datetime)
+  }
+  
+}
 #' Plot the time series and results of bfast0n
 #' 
 #' @param bp     breakpoints object from strucchange::breakpoints()
@@ -508,6 +575,15 @@ cal_BFAST <- function( breaks, magthreshold, formula, magcomponent, coefcomponen
                        timeserieslist = tslist,
                        parameters = params$bfastLiteInputs,
                        cl = mycores)
+  runBFASTLite_datetime <- function(i, timeserieslist, parameters) {
+    
+    parameters$InputTS <- timeserieslist[[i]]
+    return(do.call(UseBFASTLite_datetime, parameters))
+  }
+  bfastres_datetime <- lapply(1:length(tslist), runBFASTLite_datetime, 
+                              timeserieslist = tslist, 
+                              parameters = params$bfastLiteInputs)
+  
   # join sample ids and centroid coordinates to the BFAST Monitor output
   print("Join output to sample ID information")
   theoutput <- pblapply(1:length(bfastres), 
@@ -532,17 +608,20 @@ cal_BFAST <- function( breaks, magthreshold, formula, magcomponent, coefcomponen
   if ("Magnitude.before" %in% colnames(theoutput)) {
     theoutput <- theoutput %>% 
       mutate(Magnitude = if_else(!is.na(Magnitude.RMSD),Magnitude.RMSD, 0))}
-  if ("tile" %in% colnames(validating_data_path)) {return(theoutput)} else {
-    # make an output file name 
-    outname <- output_path
-    
-    
-    # export
-    data.table::fwrite(theoutput,
-                       file = outname,
-                       showProgress = TRUE)
-    return(theoutput)
-  }
+  if ("tile" %in% colnames(validating_data_path)) {
+    bpanddatetime <- list("bp" = theoutput, "datetime" = bfastres_datetime)
+    return(bpanddatetime)} else {
+      # make an output file name 
+      outname <- output_path
+      
+      
+      # export
+      data.table::fwrite(theoutput,
+                         file = outname,
+                         showProgress = TRUE)
+      bpanddatetime <- list("bp" = theoutput, "datetime" = bfastres_datetime)
+      return(bpanddatetime)
+    }
   
 }
 # This function used to write the output after running the dataset on BFAST lite. This fuction only
@@ -555,4 +634,147 @@ writeoutput <- function(outputbfast, ouputpath) {
   data.table::fwrite(theoutput,
                      file = outname,
                      showProgress = TRUE)
+}
+
+
+#' Function to merge breakpoints from all bands together 
+
+#' 
+#' @return data.frame 
+#' @param SR_breakpoints: a list of data.frame. Each list corresponds to a band (1,2,3,4,5,6). Each df contains sample ids and their corresponding breakpoints.
+#' This df contains all sample ids which also do not contain breakpoints or could not be used to detected due to too much clouds. 
+#' @param SR_cal_datetime : a list of bands. Each band contains lists of time series without NA. Each time series is corresponding with a sample id.
+#' The order of the time series list matches with theirs corresponding sample id orders in SR_breakpoints   
+#' @return a dictionary which contains sample ids and their corresponding breakpoints
+
+aggregate_all_bands <- function(SR_breakpoints,SR_cal_datetime ) {
+  sampleid_SR_cal <- unique(SR_breakpoints[[1]]$sample_id) # get the unique sample id
+  SR_cal_datetimedict <- hash() # save a sample id and its ts in a dictionary
+  merged_ts <- list()
+  
+  for (i in 1:length(sampleid_SR_cal)) {
+    # Check if all the lists from list_2 to list_7 are identical for the i-th element
+    if (identical(SR_cal_datetime$list_2[[i]], SR_cal_datetime$list_3[[i]]) && 
+        identical(SR_cal_datetime$list_3[[i]], SR_cal_datetime$list_4[[i]]) && 
+        identical(SR_cal_datetime$list_4[[i]], SR_cal_datetime$list_5[[i]]) && 
+        identical(SR_cal_datetime$list_5[[i]], SR_cal_datetime$list_6[[i]]) &&
+        identical(SR_cal_datetime$list_6[[i]], SR_cal_datetime$list_7[[i]])) {
+      
+      # if no difference, append any ts to the general list
+      merged_ts <- append(merged_ts, list(SR_cal_datetime$list_2[[i]]))
+      
+      
+    } else { # if not, extract the difference of other ts bands compared to the base band 2
+      
+      # Use lapply to find elements that are not in list_2 for each list
+      extra_date <- lapply(SR_cal_datetime[-1], function(x) setdiff(x[[i]], SR_cal_datetime$list_2[[i]]))
+      extra_date <- unique(extra_date)
+      # Combine list_2's i-th element with all extra dates
+      new_ts <- sort(c(SR_cal_datetime$list_2[[i]], unlist(extra_date)))
+      # Add the new time series to merged_ts
+      merged_ts <- append(merged_ts, list(new_ts))
+    }
+  }
+  # merged_ts contain Nan and null data. Remove them
+  deleted_indices <- which(sapply(merged_ts, is.null))
+  merged_ts <- Filter(Negate(is.null), merged_ts)
+  # remove the same id in sample id
+  sampleid_SR_cal <- sampleid_SR_cal[-deleted_indices]
+  # make dictionary for ts and sample ids
+  for (nr.sampid in 1: length(sampleid_SR_cal)) {
+    SR_cal_datetimedict[sampleid_SR_cal[nr.sampid]] <- merged_ts[[nr.sampid]]
+  }
+  # filter only sample id containing breaks
+  SR_breakpoints_filled <- lapply(SR_breakpoints, function(band) band[!band$Breakpoint %in% c(-9999, NA),])
+  
+  final_bp <- hash()
+  # loop through each sample id to aggregate the results from all band
+  for (sample_id_nr in sampleid_SR_cal ) { print(paste("next sample id", sample_id_nr))
+    bp_sp1_bands <- lapply(SR_breakpoints_filled, function(band) {
+      band <- band[band$sample_id == sample_id_nr, c("sample_id", "vecmag", "datetime", "Breakpoint")]
+      band$datetime <- as.Date(band$datetime)
+      return(band)
+    })
+    
+    SR_cal_datetime1 <- as.Date(unlist(values(SR_cal_datetimedict, keys = sample_id_nr)))
+    
+    
+    # track whether there is any row in the sample id at all
+    record <- 0
+    if (nrow(bp_sp1_bands[[1]]) >0 | nrow(bp_sp1_bands[[2]]) >0|nrow(bp_sp1_bands[[3]]) >0|nrow(bp_sp1_bands[[4]]) >0|nrow(bp_sp1_bands[[5]]) >0|nrow(bp_sp1_bands[[6]]) >0) {
+      # determine which band has the longest rows or breaks
+      max_length <- which.max(c(NROW(bp_sp1_bands[[1]]), NROW(bp_sp1_bands[[2]]), NROW(bp_sp1_bands[[3]]), NROW(bp_sp1_bands[[4]]),
+                                NROW(bp_sp1_bands[[5]]), NROW(bp_sp1_bands[[6]])))
+      # loop through all bands till the longest breaks of a band gets to 0
+      while (NROW(bp_sp1_bands[[max_length]] >= 1)) {selected_datetime <- hash()
+      # select date time of the first break from all bands
+      for (band in seq_along(bp_sp1_bands)) {
+        if (length(bp_sp1_bands[[band]]$datetime) > 0) {
+          selected_datetime[band] <- bp_sp1_bands[[band]]$datetime[1]
+        }
+      }
+      
+      record <- record + 1
+      # Convert the date strings to Date objects
+      dates <- as.Date(unlist(values(selected_datetime)))
+      
+      # Find the earliest date of the first break
+      earliest_date <- which.min(dates)
+      earliest_date_date <- min(dates, na.rm = TRUE)
+      i <- 0
+      # find the end date (+ 6 observations from the first break date)
+      for (date. in SR_cal_datetime1) { i = i +1
+      if ((earliest_date_date == as.Date(date.)) == TRUE) {
+        end_date <- SR_cal_datetime1[i+6]
+      }
+      }
+      
+      # select dates that fall within the range dates
+      selected_dates <- dates[dates >= earliest_date_date & dates <= end_date ]
+      selected_dates_dict <- hash(selected_dates)
+      
+      # Get the keys (band number) corresponding to the selected dates
+      selected_bands <-  as.numeric(unlist(keys(selected_dates_dict)))
+      # calculate the change vector magnitude
+      vec_mag <- c()
+      for (i in selected_bands) {
+        vec_mag <- c(bp_sp1_bands[[i]]$vecmag[1], vec_mag)
+      }
+      vec_mag_matrix <- matrix(vec_mag,nrow = 1,ncol = length(vec_mag))
+      sum_vecmag <- norm(vec_mag_matrix)^2
+      selected_vecmag <- hash()
+      # detect break
+      if (sum_vecmag > threshold) {
+        for (band in seq_along(bp_sp1_bands)) {
+          if (length(bp_sp1_bands[[band]]$datetime) > 0) {
+            selected_vecmag[band] <- bp_sp1_bands[[band]]$vecmag[1]
+          }
+        }
+        # Find the name (key) with the maximum value
+        # Find the key with the maximum value
+        max_key <- keys(selected_vecmag)[which.max(unlist(values(selected_vecmag)))]
+        
+        # Print the key with the maximum value
+        max_key <- as.numeric(max_key)
+        
+        
+        # save breakpoints that has largest vector magnitude
+        if (all(has.key(as.character(bp_sp1_bands[[max_key]]$sample_id[1]), final_bp))== TRUE) {
+          final_bp[[as.character(bp_sp1_bands[[max_key]]$sample_id[1])]] <- c(final_bp[[as.character(bp_sp1_bands[[max_key]]$sample_id[1])]], bp_sp1_bands[[max_key]]$Breakpoint[1])
+        } else {final_bp[bp_sp1_bands[[max_key]]$sample_id[1]] <- bp_sp1_bands[[max_key]]$Breakpoint[1]
+        }
+        
+      } else {final_bp[sample_id_nr] <- -9999 
+      }
+      # drop rows that used for calculating vec_mag
+      for (bandnr. in selected_bands) {
+        bp_sp1_bands[[bandnr.]] <- bp_sp1_bands[[bandnr.]][-1,]
+      }
+      } # end while loop
+    } else {if (record == 0) { final_bp[sample_id_nr] <- "not included"
+    next } else {
+      next
+    }}
+  } # end for loop
+  return(final_bp)
 }

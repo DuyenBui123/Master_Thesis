@@ -65,7 +65,7 @@ bp_all_cold$sample_id <- as.numeric(bp_all_cold$sample_id)
 bp_all_cold$Breakpoint <- as.numeric(bp_all_cold$Breakpoint)
 # Validate the result
 SR_cal_COLD <- validateAlgorithmTotal(ref_df = cal_comb_ref_cold, 
-                                   algo_df = bp_all_cold, cl= mycores)
+                                      algo_df = bp_all_cold, cl= mycores)
 # statistical value
 SR_cal_COLD_stats <- myFPStats(SR_cal_COLD, NewAccuracy = TRUE)
 
