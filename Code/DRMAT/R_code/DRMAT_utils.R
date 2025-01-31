@@ -10,7 +10,7 @@
 #' @param obs_nonNan observation dataset that was interpolated
 #' @param sample_idsobs_nonNan a total reference dataset with all sample id
 #' @return a dataframe result with statistics of confusion matrices
-DRMAT_conmax <- function(bpTfile, bpSfile, comb_ref_rm, obs_nonNan, sample_ids_of_obs_nonNan) { # read the text file of seasonality breakpoints
+DRMAT_conmax <- function(bpTfile, bpSfile, comb_ref_rm, sample_ids_of_obs_nonNan) { # read the text file of seasonality breakpoints
   bp_S <- read.delim(bpSfile,header = F)
   # # read the text file of trend breakpoints
   bp_T <- read.delim(bpTfile,header = F)
@@ -51,20 +51,20 @@ DRMAT_conmax <- function(bpTfile, bpSfile, comb_ref_rm, obs_nonNan, sample_ids_o
   
   
 }
-# This function used to interpolate the missing data in the observation dataset using linear interpolation
+# This function used to interpolate the missing data in the observation dataset using linear intepolation
 #' 
 #' @param rm_id  a directory path of the data that is needed to be interpolated. Suppose to be a time series data
 #' @param tsorigin a ts list before interpolated but after preprocessed to determined seasonality parameter and remove dates 
 #' if the number of dates per year exceeds the number of seasonality. In this case it is equal 22
-#' @param tslist_notstpl a ts dataframe that contains all sample id that was not interpolated by stlplus. Need to 
-#' have the same formate as ts origin
+#' @param tslist_stpl a ts dataframe that contains all sample id that was interpolated by stlplus. Need to 
+#' have the same format as ts origin
 #' @param ndvi a logic (TRUE or FALSE). If it is a TRUE, it means that the rm_id list is not yet complete. Therefore need to extract sample id from the total rm_id list that can be stilled 
 #' interpolated. It is a FALSE, the rm_id input is the result of ndvi dataset
 
 #' @return a list of results include: time series before being interpolated but after preprocessing (have fewer dates than the original input),
 #' time series after being interpolated, a list of index of sample id that is needed to be removed
 
-linear_inter <- function(rm_id, tsorigin, tslist_notstpl, ndvi) {
+linear_inter <- function(rm_id, tsorigin, tslist_stpl, ndvi) {
   if (ndvi) {# create an empty list that collects indices that contain fewer than 12 consective missing data
     list_consec_nan_12 <- c()
     for (id in rm_id) { # loop through indices in rm_id (index that got removed from ndvi dataset)
@@ -92,7 +92,7 @@ linear_inter <- function(rm_id, tsorigin, tslist_notstpl, ndvi) {
     }
     list_4_lin_inter_df <- as.data.frame(do.call(rbind, list_4_lin_inter)) # convert a list into dataframe
     colnames(list_4_lin_inter_df) <- df$date # replace the column names with all dates in of time series
-    tslist_non_and_lin <-  rbind(tslist_notstpl, list_4_lin_inter_df) # combine data that interpolated with stplus and linear interpolation
+    tslist_non_and_lin <-  rbind(tslist_stpl, list_4_lin_inter_df) # combine data that interpolated with stplus and linear interpolation
     mylist <- list("remain_id" = list_consec_nan_12, "tslist_all" = tslist_non_and_lin) # Make a list of results need to be return
     return(mylist)} else { # if ndvi = FALSE, used the rm_id output of ndvi dataset
       list_4_lin_inter <- list()
@@ -104,7 +104,7 @@ linear_inter <- function(rm_id, tsorigin, tslist_notstpl, ndvi) {
       }
       list_4_lin_inter_df <- as.data.frame(do.call(rbind, list_4_lin_inter))
       colnames(list_4_lin_inter_df) <- df$date
-      tslist_non_and_lin <-  rbind(tslist_notstpl, list_4_lin_inter_df)
+      tslist_non_and_lin <-  rbind(tslist_stpl, list_4_lin_inter_df)
       return(tslist_non_and_lin)
       
     }

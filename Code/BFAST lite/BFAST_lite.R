@@ -14,7 +14,7 @@
 install.packages("pacman")
 library(pacman)
 if (!require("pacman")) install.packages("pacman"); library(pacman)
-p_load(here, sf, zoo, data.table, tidyverse, pbapply,parallel, sandwich) #, bfast, strucchangeRcpp)
+p_load(here, sf, zoo, data.table, tidyverse, pbapply,parallel, sandwich, hash) #, bfast, strucchangeRcpp)
 
 # source external functions
 setwd("/home/duyen/Master_Thesis/")
@@ -45,13 +45,12 @@ ifelse(!dir.exists(file.path(mainDir, subDir)), dir.create(file.path(mainDir, su
 
 BFASTlite_BIC_SandT_025 <- cal_BFAST("BIC", 0.25, 
                                      response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                     "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                      "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_025.csv", plot = FALSE, cl=mycores)
 ##### adding date tiime
 theoutput <- data.table::rbindlist(BFASTlite_BIC_SandT_025$datetime, fill = TRUE)
 as.data.frame(BFASTlite_BIC_SandT_025$datetime[[1]])
-install.packages("hash")
-library(hash)
+
 datetime_dict <- hash()
 sampleid_NDVI_cal <- unique(BFASTlite_BIC_SandT_025$bp$sample_id)
 for (nr.sampid in 1: length(sampleid_NDVI_cal)) {
@@ -60,43 +59,23 @@ for (nr.sampid in 1: length(sampleid_NDVI_cal)) {
 
 ################################
 
-BFASTlite_BIC_SandT_025_v1 <- cal_BFAST("BIC", 0.25, 
-                                        response ~ harmon + trend, "trend", "trend", 
-                                        "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                        "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_025.csv", plot = FALSE, cl=mycores)
+
 
 BFASTlite_BIC_T_025 <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_025.csv", plot = FALSE, cl=mycores)
 
 
 BFASTlite_BIC_S_025 <- cal_BFAST("BIC", 0.25, response ~ harmon,
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg",
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_S_025.csv", plot = FALSE, cl=mycores)
 
 
-
-BFASTlite_BIC_SandT_030 <- cal_BFAST("BIC", 0.30, 
-                                     response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_030.csv", plot = FALSE, cl=mycores)
-
-BFASTlite_BIC_T_030 <- cal_BFAST("BIC", 0.30, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_030.csv", plot = FALSE, cl=mycores)
-
-
-BFASTlite_BIC_S_030 <- cal_BFAST("BIC", 0.30, response ~ harmon,
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_S_030.csv", plot = FALSE, cl=mycores)
-
 BFASTlite_BIC_SandT_050 <- cal_BFAST("BIC", 0.50, 
                                      response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                     "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                      "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_050.csv", plot = FALSE, cl=mycores)
 
 BFASTlite_BIC_T_050 <- cal_BFAST("BIC", 0.50, response ~ trend, "trend", "trend",
@@ -106,117 +85,78 @@ BFASTlite_BIC_T_050 <- cal_BFAST("BIC", 0.50, response ~ trend, "trend", "trend"
 BFASTlite_BIC_S_050 <- cal_BFAST("BIC", 0.50, response ~ harmon,
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg",
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_S_050.csv", plot = FALSE, cl=mycores)
 
 
 BFASTlite_BIC_SandT_1 <- cal_BFAST("BIC", 1, response ~ harmon + trend, "trend", "trend",
-                                   "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                   "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                    "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_1.csv", plot = FALSE, cl=mycores)
 
 
 BFASTlite_BIC_T_1 <- cal_BFAST("BIC", 1, response ~ trend, "trend", "trend",
-                               "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                               "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_1.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_BIC_S_1 <- cal_BFAST("BIC", 1, response ~ harmon,
                                c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
                                c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                               "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
+                               "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg",
                                "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_S_1.csv", plot = FALSE, cl = mycores)
 
 
 
-BFASTlite_BIC_SandT_inf <- cal_BFAST("BIC", -Inf, response ~ harmon + trend, "trend", "trend",
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_Inf.csv", plot = FALSE, cl = mycores)
 
-BFASTlite_BIC_T_inf <- cal_BFAST("BIC", -Inf, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_Inf.csv", plot = FALSE, cl = mycores)
-
-
-BFASTlite_BIC_S_inf <- cal_BFAST("BIC", -Inf, response ~ harmon,
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_S_Inf.csv", plot = FALSE, cl = mycores)
 
 # Calibrate LWZ, formula: response ~ trend + harmon OR response ~ trend OR response ~ harmon, magnitude threshold: 0.25, 0.3, 1, -inf
 
 BFASTlite_LWZ_SandT_025 <- cal_BFAST("LWZ", 0.25, 
                                      response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                     "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                      "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_SandT_025.csv", plot = FALSE, cl = mycores)
 
 
 BFASTlite_LWZ_T_025 <- cal_BFAST("LWZ", 0.25, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_T_025.csv",plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_S_025 <- cal_BFAST("LWZ", 0.25, response ~ harmon,
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg",
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_S_025.csv", plot = FALSE, cl = mycores)
 
-BFASTlite_LWZ_SandT_030 <- cal_BFAST("LWZ", 0.30, 
-                                     response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_SandT_030.csv", plot = FALSE, cl = mycores)
 
-BFASTlite_LWZ_T_030 <- cal_BFAST("LWZ", 0.30, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_T_030.csv", plot = FALSE, cl = mycores)
-
-BFASTlite_LWZ_S_030 <- cal_BFAST("LWZ", 0.30, response ~ harmon,
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_S_030.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_SandT_050 <- cal_BFAST("LWZ", 0.50, 
                                      response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                     "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                      "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_SandT_050.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_T_050 <- cal_BFAST("LWZ", 0.50, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_T_050.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_S_050 <- cal_BFAST("LWZ", 0.50, response ~ harmon,
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
                                  c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
+                                 "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg",
                                  "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_S_050.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_SandT_1 <- cal_BFAST("LWZ", 1, response ~ harmon + trend, "trend", "trend", 
-                                   "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                                   "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                    "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_SandT_1.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_T_1 <- cal_BFAST("LWZ", 1, response ~ trend, "trend", "trend",
-                               "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
+                               "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg", 
                                "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_T_1.csv", plot = FALSE, cl = mycores)
 
 BFASTlite_LWZ_S_1 <- cal_BFAST("LWZ", 1, response ~ harmon,
                                c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
                                c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                               "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
+                               "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_cal.gpkg",
                                "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_S_1.csv", plot = FALSE, cl = mycores)
 
-BFASTlite_LWZ_SandT_inf <- cal_BFAST("LWZ", -Inf, response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_SandT_inf.csv", plot = FALSE, cl = mycores)
-
-BFASTlite_LWZ_T_inf <- cal_BFAST("LWZ", -Inf, response ~ trend, "trend", "trend",
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_T_inf.csv", plot = FALSE, cl = mycores)
-
-BFASTlite_LWZ_S_inf <- cal_BFAST("LWZ", -Inf, response ~ harmon,
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 c("harmoncos1","harmoncos2", "harmoncos3", "harmonsin1", "harmonsin2", "harmonsin3"),
-                                 "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg",
-                                 "./Intermediate product/cloud_free_product/_output_BFASTlite_LWZ_S_inf.csv", plot = FALSE, cl = mycores)
 
 
 
@@ -224,17 +164,17 @@ BFASTlite_LWZ_S_inf <- cal_BFAST("LWZ", -Inf, response ~ harmon,
 
 # Run BFAST Lite on NDVI validation dataset
 # Set of parameters is chosen based on F1 score of all calibration sets above. The one that has the highest F1 score is chosen
-# BIC, response ~ trend, and magnitude threshold = 0.25 
-BFASTlite_BIC_T_025_val <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_val.gpkg", 
-                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_025_val.csv",  plot = FALSE, cl = mycores)
+## RESULT: trend+harmon, BIC, 0.25
+BFASTlite_BIC_T_025_val <- cal_BFAST("BIC", 0.25, response ~ trend + harmon, "trend", "trend",
+                                     "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_val.gpkg", 
+                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_025_val.csv",  plot = FALSE, cl = mycores)
 
 ####################### METHOD 1 for running multiple bands of satellite data ##
 # Select the most dominant floor year that contain more than or equal to 3 breakpoints 
 # from all bands. Then choose the highest magnitude breakpoints.
 ###################### RUN BFAST LITE ON SATELLITE DATA  #######################
 # Read the CALIBRATION set of satellite data 
-SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_cal.gpkg"
+SR_GPKG = "./Intermediate product/cloud_free_product/BFAST_lite_SR_cal.gpkg"
 # Read each name layer of the satellite data
 SRNames = st_layers(SR_GPKG)$name
 SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
@@ -243,29 +183,47 @@ SR_nogeom <- lapply(SR, function(x) sf::st_drop_geometry(x))
 # Initialize an empty list to store the lists from each iteration
 all_lists <- list()
 # Run BFAST Lite on the dataset
-for (layer in 2:7) { breakpoint_SR <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
-                                                SR_nogeom[[layer]], 
-                                                NULL,  plot = FALSE, cl = mycores)
-# Write the output of BFAST lite
-OutFile = paste(base_path, "_output_BFASTlite_breakpoint_SR_cal.gpkg", sep="_")
 
-st_write(breakpoint_SR$bp, dsn = OutFile, layer = SRNames[layer])
+# for (layer in 2:7) { breakpoint_SR <- cal_BFAST("BIC", 0.25, response ~ trend + harmon, "trend", "trend",
+#                                                           SR_nogeom[[layer]], 
+#                                          NULL,  plot = FALSE, cl = mycores)
+#                               # Write the output of BFAST lite
+#                               OutFile = paste(base_path, "_output_BFASTlite_breakpoint_SR_cal.gpkg", sep="_")
+#                                
+#                               st_write(breakpoint_SR$bp, dsn = OutFile, layer = SRNames[layer])
+#                               
+#                              # Store the current list in all_lists
+#                               all_lists[[paste0("list_", layer)]] <- breakpoint_SR$datetime
+#                                 
+# }
 
-# Store the current list in all_lists
-all_lists[[paste0("list_", layer)]] <- breakpoint_SR$datetime
-
+breakpoint_SR <- lapply(SR_nogeom, function(x) cal_BFAST("BIC", 0.25, response ~ trend + harmon, "trend", "trend",
+                                                         x, 
+                                                         NULL,  plot = FALSE, cl = mycores))
+for(layer in 2:7){
+  # Write the output of BFAST lite
+  OutFile = paste(base_path, "_output_BFASTlite_breakpoint_SR_cal.gpkg", sep="_")
+  
+  st_write(breakpoint_SR[[layer]]$bp, dsn = OutFile, layer = SRNames[layer])
+  # Store the current list in all_lists
+  all_lists[[paste0("list_", layer)]] <- breakpoint_SR[[layer]]$datetime
 }
+
+
 OutFile_datetime_SR_cal <- paste(base_path, "_output_BFASTlite_datetime_SR_cal.rds", sep="_")
 # Save the overarching list into a file
 saveRDS(all_lists, file = OutFile_datetime_SR_cal)
 
-BFASTlite_BIC_SandT_025 <- cal_BFAST("BIC", 0.25, 
-                                     response ~ harmon + trend, "trend", "trend", 
-                                     "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg", 
-                                     "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_025.csv", plot = FALSE, cl=mycores)
-BFASTlite_BIC_SandT_025$
-  # Read the VALIDATION set of satellite data 
-  SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_val.gpkg"
+
+#######test
+check <- read.csv( "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_SandT_025_val.csv")
+SR_GPKG = "./Intermediate product/cloud_free_product/__output_BFASTlite_breakpoint_SR_cal.gpkg"
+# Read each name layer of the satellite data
+SRNames = st_layers(SR_GPKG)$name
+SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
+
+# Read the VALIDATION set of satellite data 
+SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_val.gpkg"
 # Read each name layer of the satellite data
 SRNames = st_layers(SR_GPKG)$name
 SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
@@ -281,56 +239,56 @@ OutFile = paste(base_path, "_output_BFASTlite_breakpoint_SR_val.gpkg", sep="_")
 st_write(breakpoint_SR, dsn = OutFile, layer = SRNames[layer])
 
 }
-####################### METHOD 2 ###############################################
-# Sum value of all band for each date. The output is one layer that contains summary values from all bands. Use this layer to run on the BFAST Lite.
-# There is no need to calibrate in this method, but I run the calibration subdata set anyway
-# Read the CALIBRATION set of satellite data 
-SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_cal.gpkg"
-# Read each name layer of the satellite data
-SRNames = st_layers(SR_GPKG)$name
-SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
-# Convert a list of layers into a dataframe that contain all layers. Make sum of all rows for each sample id among all bands
-SR_comb <- bind_rows(SR) %>%
-  group_by( sample_id, centroid_x, centroid_y, tile, geom) %>%
-  summarise_all(sum) %>%
-  ungroup() %>%
-  as.data.frame()
-
-
-# Remove geom column from the dataset
-SR_nogeom <- as.data.frame(SR_comb)
-SR_nogeom <- SR_nogeom[, !names(SR_nogeom) %in% c( "geom")]
-# Write the result
-write.csv(SR_nogeom, file = "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_cal.csv")
-# Run the result on BFAST Lite
-BFASTlite_BIC_T_025_SR_com_M2_cal <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
-                                               "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_cal.csv", 
-                                               "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_025_SR_comb_M2_cal.csv",  plot = FALSE, cl = mycores)
-
-
-# Read the VALIDATION dataset of satellite data
-SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_val.gpkg"
-# Read each name layer of the satellite data
-SRNames = st_layers(SR_GPKG)$name
-SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
-# Convert a list of layers into a dataframe that contain all layers. Make sum of all rows for each sample id among all bands
-SR_comb <- bind_rows(SR) %>%
-  group_by( sample_id, centroid_x, centroid_y, tile, geom) %>%
-  summarise_all(sum) %>%
-  ungroup() %>%
-  as.data.frame()
-
-# Remove geom column from the dataset
-SR_nogeom <- as.data.frame(SR_comb)
-SR_nogeom <- SR_nogeom[, !names(SR_nogeom) %in% c("geom")]
-# Write the result
-write.csv(SR_nogeom, file = "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_val.csv")
-# Run the result on BFAST Lite
-BFASTlite_BIC_T_025_SR_com_M2_val <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
-                                               "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_val.csv", 
-                                               "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_025_SR_comb_M2_val.csv",  plot = FALSE, cl = mycores)
-
-
+# ####################### METHOD 2 ###############################################
+# # Sum value of all band for each date. The output is one layer that contains summary values from all bands. Use this layer to run on the BFAST Lite.
+# # There is no need to calibrate in this method, but I run the calibration subdata set anyway
+# # Read the CALIBRATION set of satellite data 
+# SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_cal.gpkg"
+# # Read each name layer of the satellite data
+# SRNames = st_layers(SR_GPKG)$name
+# SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
+# # Convert a list of layers into a dataframe that contain all layers. Make sum of all rows for each sample id among all bands
+# SR_comb <- bind_rows(SR) %>%
+#   group_by( sample_id, centroid_x, centroid_y, tile, geom) %>%
+#   summarise_all(sum) %>%
+#   ungroup() %>%
+#   as.data.frame()
+# 
+# 
+# # Remove geom column from the dataset
+# SR_nogeom <- as.data.frame(SR_comb)
+# SR_nogeom <- SR_nogeom[, !names(SR_nogeom) %in% c( "geom")]
+# # Write the result
+# write.csv(SR_nogeom, file = "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_cal.csv")
+# # Run the result on BFAST Lite
+# BFASTlite_BIC_T_025_SR_com_M2_cal <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
+#                                      "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_cal.csv", 
+#                                      "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_025_SR_comb_M2_cal.csv",  plot = FALSE, cl = mycores)
+# 
+# 
+# # Read the VALIDATION dataset of satellite data
+# SR_GPKG = "./Intermediate product/cloud_free_product/__cloudfree_L8TS__SR_val.gpkg"
+# # Read each name layer of the satellite data
+# SRNames = st_layers(SR_GPKG)$name
+# SR = lapply(SRNames, function(name) st_read(SR_GPKG, layer=name))
+# # Convert a list of layers into a dataframe that contain all layers. Make sum of all rows for each sample id among all bands
+# SR_comb <- bind_rows(SR) %>%
+#   group_by( sample_id, centroid_x, centroid_y, tile, geom) %>%
+#   summarise_all(sum) %>%
+#   ungroup() %>%
+#   as.data.frame()
+# 
+# # Remove geom column from the dataset
+# SR_nogeom <- as.data.frame(SR_comb)
+# SR_nogeom <- SR_nogeom[, !names(SR_nogeom) %in% c("geom")]
+# # Write the result
+# write.csv(SR_nogeom, file = "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_val.csv")
+# # Run the result on BFAST Lite
+# BFASTlite_BIC_T_025_SR_com_M2_val <- cal_BFAST("BIC", 0.25, response ~ trend, "trend", "trend",
+#                                                "./Intermediate product/cloud_free_product/_cloudfree_L8TS_SR_comb_M2_val.csv", 
+#                                                "./Intermediate product/cloud_free_product/_output_BFASTlite_BIC_T_025_SR_comb_M2_val.csv",  plot = FALSE, cl = mycores)
+# 
+# 
 
 ## TEST
 # define paramaters for BFAST Monitor and preprocessing
@@ -345,15 +303,15 @@ params <- list(
     breaks="LWZ",
     sctype="OLS-MOSUM", 
     maginterval=0.1, 
-    magcomponent="trend",
+    magcomponent= c("trend"),
     magstat="RMSD", 
     magthreshold=-Inf, 
-    coefcomponent="trend",
+    coefcomponent=c("trend"),
     coefthresholds=c(0, 0), 
     plot=FALSE, 
     quiet=TRUE, 
     order=3,
-    formula=response ~ harmon + trend, 
+    formula=response ~ harmon + trend , 
     TargetYears=NULL,
     seasonfreq=3, 
     breaknumthreshold=Inf, 
@@ -362,7 +320,7 @@ params <- list(
 )
 
 # load an preprocess the input datafile 
-l8ndvi <- prepL8NDVIdataframe("./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_cal.gpkg")
+l8ndvi <- prepL8NDVIdataframe(SR_nogeom[[2]])
 
 # prepare time series ------------------------------------------------------
 
@@ -394,10 +352,27 @@ runBFASTLite <- function(i, timeserieslist, parameters) {
 
 print("Run BFAST Lite on every ts object")
 
-bfastres <- lapply(1:100, runBFASTLite, 
+bfastres <- lapply(1:500, runBFASTLite, 
                    timeserieslist = tslist, 
                    parameters = params$bfastLiteInputs)
+old_bfastres <- bfastres
+RMSD <- lapply(bfastres, function(x) return(x$Magnitude.RMSD[1]))
 
+RMSD <- Filter(Negate(is.null), RMSD)
+
+RMSE_cold <- lapply(bfastres, function(x) return(x$rmse[1]))
+RMSE_cold <- Filter(Negate(is.null), RMSE_cold)
+
+RMSE_bfastlite <- lapply(bfastres, function(x) return(x$Magnitude.COLD_RMSE[1]))
+RMSE_bfastlite <- Filter(Negate(is.null), RMSE_bfastlite)
+x <- 1:64
+# Plot multiple lines using matplot
+matplot(x, cbind(RMSD, RMSE_cold, RMSE_bfastlite), type = "l", lty = 1, 
+        col = c("red", "blue", "green"), xlab = "X", 
+        ylab = "Y", main = "Multiple Lines Plot")
+legend("topright", legend = c("RMSD", "RMSE_cold", "RMSE_bfastlite"), 
+       col = c("red", "blue", "green"), 
+       lty = 1)
 runBFASTLite_datetime <- function(i, timeserieslist, parameters) {
   
   parameters$InputTS <- timeserieslist[[i]]

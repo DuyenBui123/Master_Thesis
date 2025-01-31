@@ -39,7 +39,7 @@ colnames(cal_id_i)<- c("sample_id")
 # generate IDs for the remained obs after remove ID with nan
 cal_id_i <- tibble::rowid_to_column(cal_id_i, "ID")
 # Filter out ids in ref data that are not contain in id file 
-cal_comb_ref_cold <- cal_comb_ref[cal_comb_ref$sample_id %in% cal_id_i,]
+cal_comb_ref_cold <- cal_comb_ref[cal_comb_ref$sample_id %in% cal_id_i$sample_id,]
 
 
 # read the result from COLD

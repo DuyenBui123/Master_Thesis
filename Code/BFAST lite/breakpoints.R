@@ -31,7 +31,7 @@ breakpoints.formula <- function(formula, h = 0.15, breaks = c("BIC", "LWZ", "RSS
   X <- model.matrix(modelterms, data = data)
   
   RVAL <- breakpoints.matrix(X, y, h = h, breaks = breaks, hpc = hpc, ...)
-
+  
   
   n <- nrow(X)
   
@@ -49,12 +49,12 @@ breakpoints.formula <- function(formula, h = 0.15, breaks = c("BIC", "LWZ", "RSS
   
   RVAL$datatsp <- datatsp
   return(RVAL)
-
+  
   
 }
 # Extract predicted data
 breakpoints_pred.formula <- function(formula, h = 0.15, breaks = c("BIC", "LWZ", "RSS", "all"),
-                                data = list(), hpc = c("none", "foreach"), ...)
+                                     data = list(), hpc = c("none", "foreach"), ...)
 {
   
   mf <- model.frame(formula, data = data)
@@ -81,7 +81,7 @@ breakpoints_pred.formula <- function(formula, h = 0.15, breaks = c("BIC", "LWZ",
   
   RVAL$datatsp <- datatsp
   
-
+  
   return(fvals)
   
 }
@@ -916,7 +916,7 @@ magnitude <- function(object, ...)
 }
 
 # Returns a vector of magnitudes of change
-magnitude.breakpointsfull <- function(object, interval = 0.1, breaks = NULL, component = "trend", ...)
+magnitude.breakpointsfull <- function(object, object2,  interval = 0.1, breaks = NULL, component = "trend", ...) # add external object2
 {
   # When a breakpoint is detected, the magnitude of the change is assessed within a specific window around the breakpoint.
   # This window is defined as a percentage of the total length of the time series, which is controlled by the maginterval parameter.
@@ -937,10 +937,23 @@ magnitude.breakpointsfull <- function(object, interval = 0.1, breaks = NULL, com
     stop("There are no breakpoints to calculate magnitudes for!")
   if (!any(colnames(object$X) %in% component))
     stop(paste("The specified component", component, "is missing"))
+  
+  
+  #########COLD#########
+  n <- object$nobs
+  if(any(is.na(bp))) {
+    nbp <- 0
+    bp_extra <- c(0, n)
+  } else {
+    nbp <- length(bp)
+    bp_extra <- c(0, bp, n)
+    
+  }
+  #################
   co  <- coef(object, breaks=breaks)
   
-
-  Mag <- matrix(NA, nrbp, 6)
+  
+  Mag <- matrix(NA, nrbp, 7)
   for (i in 1:nrbp) {
     interval_start <- max(bp[i]-interval, 1) # Q: Why compare with 1?
     interval_end   <- min(bp[i]+interval, nrow(X))
@@ -965,16 +978,53 @@ magnitude.breakpointsfull <- function(object, interval = 0.1, breaks = NULL, com
     Mag[i, 5] <- mean(abs(fit_next - fit_prev))
     Mag[i, 6] <- mean(fit_next - fit_prev)
     
-    colnames(Mag) = c("before", "after", "diff", "RMSD", "MAD", "MD")
+    ########### COLD RMSE ##############
+    interval_start_extra <- bp_extra[i] + 1 
+    interval_end_extra   <- bp_extra[i+1] -1
+    
+    # Fitted components over the interval range from the breakpoint
+    fit_prev_extra <- co[i,   "(Intercept)"]
+    fit_next_extra <- co[i+1, "(Intercept)"]
+    num_yrs <- 365.25
+    if (length(interval_start_extra:interval_end_extra) > 24) {
+      segment_w_bp <- interval_start_extra:interval_end_extra
+      
+      datetime_seg <- object2$datetime[segment_w_bp]
+      datetime_seg <- gsub('-', '', datetime_seg)
+      datetime_seg <- as.Date(datetime_seg, format="%Y%m%d")
+      jul_date_seg <- yday(datetime_seg)
+      d_rt <- jul_date_seg[1:NROW(jul_date_seg)] - jul_date_seg[NROW(jul_date_seg)]
+      d_yr <- abs(round(d_rt/num_yrs)*num_yrs-d_rt)
+      d_yr_sort <- order(d_yr[1:NROW(d_yr)-1])
+      d_yr_selec <-  d_yr_sort[1:24]
+      for (comp in component) {
+        fit_prev_extra <- X[d_yr_selec,comp] * co[i,   comp] + fit_prev_extra
+        fit_next_extra <- X[d_yr_selec,comp] * co[i+1, comp] + fit_next_extra
+      }
+      Mag[i, 7] <- sqrt(mean((fit_next_extra - fit_prev_extra)^2))
+      
+    } else {
+      for (comp in component) {
+        fit_prev_extra <- X[interval_start_extra:interval_end_extra,comp] * co[i,   comp] + fit_prev_extra
+        fit_next_extra <- X[interval_start_extra:interval_end_extra,comp] * co[i+1, comp] + fit_next_extra
+      }
+      Mag[i, 7] <- sqrt(mean((fit_next_extra - fit_prev_extra)^2))
+    }
+    
+    
+    
+    colnames(Mag) = c("before", "after", "diff", "RMSD", "MAD", "MD", "COLD_RMSE")
     
   }
+  
+  
   index <- which.max(abs(Mag[, 3]))
   m.x <- rep(bp[index], 2)
   m.y <- c(Mag[index, 1], Mag[index, 2]) #Magnitude position
   Magnitude <- Mag[index, 3] # Magnitude of biggest change
   Time <- bp[index]
-
-
+  
+  
   
   Result <- list(Mag=Mag, m.x=m.x, m.y=m.y, Magnitude=Magnitude, Time=Time )
   class(Result) <- "magnitude"

@@ -23,69 +23,69 @@ debugSource("./Code/Utils/DRMAT_utils.R")
 # add progress bar option to show it in the terminal 
 pbo <- pboptions(type="timer")
 mycores <- detectCores()
-
+#################### Calibration data ##########################################
 # Read reference data for calibration dataset
-cal_comb_ref <- read.csv("./Intermediate product/cal_compl_data.csv")
-# Read interpolated data with stl plus
-cal_ndvi_nonNan <- read.csv("./Data/Data_DRMAT/ndvi_cal.csv")
-# Remove sample ids that do not belong to the dataset used to detect breakpoint in DRMAT
-cal_comb_ref <- tibble::rowid_to_column(cal_comb_ref, "ID")
-# read sample ids that were not interpolated
-rm_id <- read.csv("./Data/Data_DRMAT/deleted_sampleid_set.csv")
-colnames(rm_id) <- NULL
-rm_id <- rm_id[ , 2]
-rm_id <- as.list(rm_id)
-cal_comb_ref_rm_part <- cal_comb_ref[!cal_comb_ref$sample_id %in% rm_id,]
+cal_comb_ref <-read.csv("./Intermediate product/cal_compl_data.csv")
+id_cal <- read.csv("./Intermediate product/cloud_free_product/DRMAT_final_sampleid_cal.csv")
+id_cal <- as.data.frame(id_cal[,2])
+colnames(id_cal) <- c("sample_id")
+cal_comb_ref_remain <- cal_comb_ref[cal_comb_ref$sample_id %in% id_cal$sample_id,]
+
 # calibrate for SR_cal interpolated by stlplus
 # calibrate DRMAT with BIC, AIC, and HQC, and ridgid = 0.001, 0.0005, 0.005, 0.01, 0.1
 # calculate the statistics for confusion matrices
-bp_BIC_0001 <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_0001.txt", "./Data/Data_DRMAT/bpcm_S_BIC_0001.txt")
-bp_BIC_00005 <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005.txt")
-bp_BIC_0005 <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_0005.txt", "./Data/Data_DRMAT/bpcm_S_BIC_0005.txt")
-bp_BIC_001 <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_001.txt", "./Data/Data_DRMAT/bpcm_S_BIC_001.txt")
+bp_BIC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_00005_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_00005_SR_cal.txt", cal_comb_ref_remain, id_cal)
+bp_BIC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_0001_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_0001_SR_cal.txt", cal_comb_ref_remain, id_cal)
+bp_BIC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_001_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_001_SR_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_BIC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_00005_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_00005_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_BIC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_0001_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_0001_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_BIC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_001_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_001_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
 
 
-bp_AIC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_00005.txt", "./Data/Data_DRMAT/bpcm_S_AIC_00005.txt")
-bp_AIC_0005 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_0005.txt", "./Data/Data_DRMAT/bpcm_S_AIC_0005.txt")
-bp_AIC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_0001.txt", "./Data/Data_DRMAT/bpcm_S_AIC_0001.txt")
-bp_AIC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_001.txt", "./Data/Data_DRMAT/bpcm_S_AIC_001.txt")
-bp_AIC_01 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_01.txt", "./Data/Data_DRMAT/bpcm_S_AIC_01.txt")
 
-bp_HQC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_00005.txt", "./Data/Data_DRMAT/bpcm_S_HQC_00005.txt")
-bp_HQC_0005 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_0005.txt", "./Data/Data_DRMAT/bpcm_S_HQC_0005.txt")
-bp_HQC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_0001.txt", "./Data/Data_DRMAT/bpcm_S_HQC_0001.txt")
-bp_HQC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_001.txt", "./Data/Data_DRMAT/bpcm_S_HQC_001.txt")
-bp_HQC_01 <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_01.txt", "./Data/Data_DRMAT/bpcm_S_HQC_01.txt")
+bp_AIC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_AIC_00005_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_AIC_00005_SR_cal.txt", cal_comb_ref_remain, id_cal)
+bp_AIC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_AIC_0001_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_AIC_0001_SR_cal.txt", cal_comb_ref_remain, id_cal)
+bp_AIC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_AIC_001_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_AIC_001_SR_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_AIC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_AIC_00005_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_AIC_00005_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_AIC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_AIC_0001_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_AIC_0001_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_AIC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_AIC_001_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_AIC_001_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+
+bp_HQC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_HQC_00005_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_HQC_00005_SR_cal.txt", cal_comb_ref_remain, id_cal)
+bp_HQC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_HQC_0001_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_HQC_0001_SR_cal.txt", cal_comb_ref_remain, id_cal)
+bp_HQC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_HQC_001_SR_cal.txt", "./Data/Data_DRMAT/DRMAT_S_HQC_001_SR_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_HQC_00005 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_HQC_00005_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_HQC_00005_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_HQC_0001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_HQC_0001_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_HQC_0001_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
+ndvi_HQC_001 <-  DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_HQC_001_NDVI_cal.txt", "./Data/Data_DRMAT/DRMAT_S_HQC_001_NDVI_cal.txt", cal_comb_ref_remain, id_cal)
 # Make a list of results of the calibration
-list_of_cal <- rbind( bp_BIC_00005 = bp_BIC_00005,bp_BIC_0001 = bp_BIC_0001, bp_BIC_0005 =  bp_BIC_0005,bp_BIC_001 = bp_BIC_001,
-                      bp_AIC_00005 = bp_AIC_00005, bp_AIC_0005 = bp_AIC_0005, bp_AIC_0001 =bp_AIC_0001,
-                      bp_AIC_001 = bp_AIC_001,  bp_HQC_00005 = bp_HQC_00005,
-                      bp_HQC_0005 = bp_HQC_0005, bp_HQC_0001 =bp_HQC_0001, bp_HQC_001 =bp_HQC_001)
+list_of_cal <- rbind( bp_BIC_00005 = bp_BIC_00005,bp_BIC_0001 = bp_BIC_0001,bp_BIC_001 = bp_BIC_001,
+                      bp_AIC_00005 = bp_AIC_00005, bp_AIC_0001 =bp_AIC_0001,
+                      bp_AIC_001 = bp_AIC_001,  bp_HQC_00005 = bp_HQC_00005, bp_HQC_0001 =bp_HQC_0001, bp_HQC_001 =bp_HQC_001)
 
-write.csv(list_of_cal, "./Intermediate product/cloud_free_product/_output_DRMAT_SR_cal.csv" )
-# calibrate for ndvi_cal interpolated by stlplus
-bp_AIC_00005_ndvi <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_00005_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_AIC_00005_ndvi.txt")
-bp_BIC_00005_ndvi <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_ndvi.txt", cal_comb_ref_rm_part, cal_ndvi_nonNan)
-bp_HQC_00005_ndvi <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_00005_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_HQC_00005_ndvi.txt")
+write.csv(list_of_cal, "./cali_ouput/_output_DRMAT_cali_SR_cal.csv" )
+
+# Make a list of results of the calibration for ndvi
 # Make a list of results of the calibration
-list_of_cal_ndvi <- rbind(bp_HQC_00005_ndvi = bp_HQC_00005_ndvi, bp_AIC_00005_ndvi = bp_AIC_00005_ndvi, bp_BIC_00005_ndvi = bp_BIC_00005_ndvi )
-write.csv(list_of_cal_ndvi, "./Intermediate product/cloud_free_product/_output_DRMAT_ndvi_cal.csv" )
+list_of_ndvi_cal <- rbind( ndvi_BIC_00005 = ndvi_BIC_00005,ndvi_BIC_0001 = ndvi_BIC_0001,ndvi_BIC_001 = ndvi_BIC_001,
+                           ndvi_AIC_00005 = ndvi_AIC_00005, ndvi_AIC_0001 =ndvi_AIC_0001,
+                           ndvi_AIC_001 = ndvi_AIC_001,  ndvi_HQC_00005 = ndvi_HQC_00005, ndvi_HQC_0001 =ndvi_HQC_0001, ndvi_HQC_001 =ndvi_HQC_001)
 
-# calibrate for ndvi cal interpolated by stlplus + linear interpolation
-cal_ndvi_nonNan_all <- read.csv("./Data/Data_DRMAT/ndvi_all_cal.csv")
-cal_id <- read.csv("./Data/Data_DRMAT/id_ndvi_all_cal.csv")
-cal_id <- cal_id[,2]
-cal_comb_ref_rm <- cal_comb_ref[cal_comb_ref$sample_id %in% cal_id,]
+write.csv(list_of_ndvi_cal, "./cali_ouput/_output_DRMAT_cali_ndvi_cal.csv" )
 
-bp_BIC_00005_ndvi_all <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_ndvi.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
-bp_AIC_00005_ndvi_all <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_00005_all_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_AIC_00005_all_ndvi.txt",  cal_comb_ref_rm, cal_ndvi_nonNan_all)
-bp_HQC_00005_ndvi_all <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_00005_all_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_HQC_00005_all_ndvi.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
-list_of_cal_ndvi_all <- rbind(bp_BIC_00005_ndvi_all = bp_BIC_00005_ndvi_all, bp_AIC_00005_ndvi_all = bp_AIC_00005_ndvi_all, bp_HQC_00005_ndvi_all = bp_HQC_00005_ndvi_all )
-# calibrate for SR cal interpolated by stlplus + linear interpolation
-bp_BIC_00005_all <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
-bp_AIC_00005_all <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_00005_all.txt", "./Data/Data_DRMAT/bpcm_S_AIC_00005_all.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
-bp_HQC_00005_all <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_00005_all.txt", "./Data/Data_DRMAT/bpcm_S_HQC_00005_all.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
-list_of_cal_all <- rbind(bp_BIC_00005_all = bp_BIC_00005_all, bp_AIC_00005_all = bp_AIC_00005_all, bp_HQC_00005_all = bp_HQC_00005_all )
+# # calibrate for ndvi cal interpolated by stlplus + linear interpolation
+# cal_ndvi_nonNan_all <- read.csv("./Data/Data_DRMAT/ndvi_all_cal.csv")
+# cal_id <- read.csv("./Data/Data_DRMAT/id_ndvi_all_cal.csv")
+# cal_id <- cal_id[,2]
+# cal_comb_ref_rm <- cal_comb_ref[cal_comb_ref$sample_id %in% cal_id,]
+# 
+# bp_BIC_00005_ndvi_all <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_ndvi.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
+# bp_AIC_00005_ndvi_all <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_00005_all_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_AIC_00005_all_ndvi.txt",  cal_comb_ref_rm, cal_ndvi_nonNan_all)
+# bp_HQC_00005_ndvi_all <-  DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_00005_all_ndvi.txt", "./Data/Data_DRMAT/bpcm_S_HQC_00005_all_ndvi.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
+# list_of_cal_ndvi_all <- rbind(bp_BIC_00005_ndvi_all = bp_BIC_00005_ndvi_all, bp_AIC_00005_ndvi_all = bp_AIC_00005_ndvi_all, bp_HQC_00005_ndvi_all = bp_HQC_00005_ndvi_all )
+# # calibrate for SR cal interpolated by stlplus + linear interpolation
+# bp_BIC_00005_all <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
+# bp_AIC_00005_all <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_AIC_00005_all.txt", "./Data/Data_DRMAT/bpcm_S_AIC_00005_all.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
+# bp_HQC_00005_all <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_HQC_00005_all.txt", "./Data/Data_DRMAT/bpcm_S_HQC_00005_all.txt", cal_comb_ref_rm, cal_ndvi_nonNan_all)
+# list_of_cal_all <- rbind(bp_BIC_00005_all = bp_BIC_00005_all, bp_AIC_00005_all = bp_AIC_00005_all, bp_HQC_00005_all = bp_HQC_00005_all )
 
 
 #################### Validation data ###########################################
@@ -97,12 +97,12 @@ val_comb_ref <- tibble::rowid_to_column(val_comb_ref, "ID")
 val_id <- read.csv("./Data/Data_DRMAT/id_ndvi_all_val.csv")
 val_id <- val_id[,2]
 val_comb_ref_rm <- val_comb_ref[val_comb_ref$sample_id %in% val_id,]
-# ndvi interpolated by stlplus + linear interpolation
-bp_BIC_00005_all_ndvi_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_ndvi_val.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_ndvi_val.txt", val_comb_ref_rm, val_ndvi_nonNan_all)
-write.csv(bp_BIC_00005_all_val, "./Output/_output_DRMAT_BIC_00005_all_val.csv")
-# SR interpolated by stlplus + linear interpolation
-bp_BIC_00005_all_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_val.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_val.txt", val_comb_ref_rm, val_ndvi_nonNan_all)
-write.csv(bp_BIC_00005_all_ndvi_val, "./Output/_output_DRMAT_BIC_00005_all_ndvi_val.csv")
+# # ndvi interpolated by stlplus + linear interpolation
+# bp_BIC_00005_all_ndvi_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_ndvi_val.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_ndvi_val.txt", val_comb_ref_rm, val_ndvi_nonNan_all)
+# write.csv(bp_BIC_00005_all_val, "./Output/_output_DRMAT_BIC_00005_all_val.csv")
+# # SR interpolated by stlplus + linear interpolation
+# bp_BIC_00005_all_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_val.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_val.txt", val_comb_ref_rm, val_ndvi_nonNan_all)
+# write.csv(bp_BIC_00005_all_ndvi_val, "./Output/_output_DRMAT_BIC_00005_all_ndvi_val.csv")
 
 
 # SR interpolated by stlplus

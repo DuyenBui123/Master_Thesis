@@ -1,10 +1,10 @@
 # ---- Scripting preparations ----------------------------------------------------------- 
 # load packages 
 if (!require("pacman")) install.packages("pacman"); library(pacman)
-p_load(data.table, tidyverse, pbapply)
+p_load(data.table, tidyverse, pbapply, hash)
 
 # source Utils 
-source(here("GitHub_code", "Utils.R"))
+source("/home/duyen/Master_Thesis/GitHub_code/Utils.R")
 
 
 
@@ -201,7 +201,7 @@ validateAlgorithmTotal <- function(ref_df, algo_df, threshold=1, quiet=FALSE,
     
     BreakTimes <- algo_df[algo_df$sample_id == i,]$Breakpoint
     SampleChunk <- ref_df[ref_df$sample_id == i, ]
-
+    
     if (all(is.na(BreakTimes))){
       # if the algorithm returned NA for whatever reason, 
       # (like errors, too many clouds, or too little data)
@@ -217,12 +217,12 @@ validateAlgorithmTotal <- function(ref_df, algo_df, threshold=1, quiet=FALSE,
       
       if (length(BreakTimes) == 1){      #
         if (BreakTimes == -9999){
-            # the algorithm did not detect a break, 
-            # so BreakTimes will be set to 0 for 
-            # the BreakConfusionStats function
-            BreakTimes <- numeric(0)
-          }      
-
+          # the algorithm did not detect a break, 
+          # so BreakTimes will be set to 0 for 
+          # the BreakConfusionStats function
+          BreakTimes <- numeric(0)
+        }      
+        
       }
       # Run the function to get a named vector with TP, TN, FP, FN
       Stats <- BreakConfusionStats(BreakTimes, TruthDates, threshold = threshold, 
@@ -230,7 +230,7 @@ validateAlgorithmTotal <- function(ref_df, algo_df, threshold=1, quiet=FALSE,
       # change the values of each column 
       SampleChunk <- SampleChunk %>% mutate(TP = Stats['TP'],TN = Stats['TN'],
                                             FP = Stats['FP'],FN = Stats['FN'])
-
+      
     } else {
       for (year in as.data.frame(ref_df)[ref_df$sample_id == i,"change_yr"])
       {
@@ -247,10 +247,10 @@ validateAlgorithmTotal <- function(ref_df, algo_df, threshold=1, quiet=FALSE,
   ProcessedDF <- data.table::rbindlist(ProcessedDF) %>% as.data.frame()
   
 }
-  
+
 
 myFPStats <- function(prediction, NewAccuracy = TRUE) {
-
+  
   
   # For the new style of accuracy assessment, we don't need repeated years
   if (NewAccuracy){
@@ -259,12 +259,14 @@ myFPStats <- function(prediction, NewAccuracy = TRUE) {
   
   # run validation statisics 
   
-    prediction <- FPStats(prediction)
-    
-    
-    # this changes the confusing name "bfast_guess" in the data.frame to "algo_guess"
+  prediction <- FPStats(prediction)
+  
+  
+  # this changes the confusing name "bfast_guess" in the data.frame to "algo_guess"
   if("bfast_guess" %in% colnames(prediction)){
     prediction <- prediction %>% rename_all(recode, bfast_guess = "algo_guess")
   }
   return(prediction)
 }
+
+
