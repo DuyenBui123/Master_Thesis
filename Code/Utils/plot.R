@@ -16,23 +16,27 @@ p_load(tidyr, ggplot2, gridExtra)
 # load external source
 debugSource("./Code/Utils/plot_utils.R")
 # extract all output files
-list_output <- list.files("./Output", pattern = "output", full.names = TRUE) 
+list_output <- list.files("./Output", pattern = "globe", full.names = TRUE) 
 # extract only output files for ndvi val which were interpolated by stlplus
 ## Plot confusion matrices
-list_output_ndvi <- list_output[grepl("ndvi", list_output) & !grepl("all", list_output)]
+list_output_ndvi <- list_output[grepl("NDVI", list_output) & !grepl("SR", list_output)]
+cold <- read.csv("./Output/COLD_NDVI_globe.csv" )
 # plot with fourfold plots
 plot_fourfold_confm(list_output_ndvi)
+# plot heatmap
+plot_heatmap_confm(list_output_ndvi)
+plot_heatmap_confm(list_output_SR)
 # plot with barchart
 bar_plot <- plot_barchart_confm(list_output_ndvi)
-grid.arrange(bar_plot[[1]], bar_plot[[2]], ncol=3)
+grid.arrange(bar_plot[[1]], bar_plot[[2]], bar_plot[[3]], ncol=3)
 dev.off()
 # extract only output files for SR val which were interpolated by stlplus
-list_output_SR <- list_output[grepl("SR", list_output) & !grepl("all", list_output) & !grepl("MaxMag", list_output)]
+list_output_SR <- list_output[grepl("SR", list_output) & !grepl("NDVI", list_output)]
 # plot with fourfold plots
 plot_fourfold_confm(list_output_SR)
 # plot with barchart
 bar_plot_SR <- plot_barchart_confm(list_output_SR)
-grid.arrange(bar_plot_SR[[1]], bar_plot_SR[[2]], ncol=3)
+grid.arrange(bar_plot_SR[[1]], bar_plot_SR[[2]], bar_plot_SR[[3]], ncol=3)
 dev.off()
 
 
@@ -45,11 +49,13 @@ for (file_nr in 1:length(list_output_ndvi)) {
   file <- append(file, list(file_read))}
 # assign the result of each algorithm to an independent variable
 Bfastlite <- as.data.frame(file[1])
-DRMAT <- as.data.frame(file[2])
+COLD <- as.data.frame(file[2])
+DRMAT <- as.data.frame(file[3])
 # create a table that contain the metrices of two algorithms
 ndvi <- tibble(
   metrics = c("F1Score", "Precision", "Sensitivity"),
   A_BFASTLite = c(Bfastlite$F1Score, Bfastlite$Precision, Bfastlite$Sensitivity),
+  A_COLD = c(COLD$F1Score, COLD$Precision, COLD$Sensitivity),
   A_DRMAT = c(DRMAT$F1Score, DRMAT$Precision, DRMAT$Sensitivity)
   
 )
@@ -61,11 +67,13 @@ for (file_nr in 1:length(list_output_SR)) {
   file_SR <- append(file_SR, list(file_read))}
 # assign the result of each algorithm to an independent variable
 Bfastlite <- as.data.frame(file_SR[1])
-DRMAT <- as.data.frame(file_SR[2])
+COLD <- as.data.frame(file_SR[2])
+DRMAT <- as.data.frame(file_SR[3])
 # create a table that contain the metrices of two algorithms
 SR <- tibble(
   metrics = c("F1Score", "Precision", "Sensitivity"),
   A_BFASTLite = c(Bfastlite$F1Score, Bfastlite$Precision, Bfastlite$Sensitivity),
+  A_COLD = c(COLD$F1Score, COLD$Precision, COLD$Sensitivity),
   A_DRMAT = c(DRMAT$F1Score, DRMAT$Precision, DRMAT$Sensitivity)
   
 )
@@ -97,7 +105,8 @@ grid.arrange(ndvi_plot1, SR_plot1, nrow = 1,  widths = c(1, 1.5))
 # save the plots
 ggsave("combined_plot.png", plot = grid.arrange(ndvi_plot1, SR_plot1, nrow = 1), width = 5, height = 3)
 
-
+############## Plot 1 score for ndvi and sr paralelly
+plot_parallel_F1(list_output_ndvi, list_output_SR)
 # TRY TO ADJUST THE RATIO OF FOURFOLD PLOTS, BUT not yet successed
 # matrix_table<- matrix(c(717, 1251, 71795, 797), nrow = 2, byrow = TRUE,
 #                       dimnames = list(
@@ -178,3 +187,7 @@ ggsave("combined_plot.png", plot = grid.arrange(ndvi_plot1, SR_plot1, nrow = 1),
 # 
 # 
 # 
+# Load necessary libraries
+# Load necessary libraries
+# Load ggplot2 for visualization
+
