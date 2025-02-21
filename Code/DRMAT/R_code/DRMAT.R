@@ -20,6 +20,7 @@ setwd("/home/duyen/Master_Thesis")
 source("./Code/Utils/gradual_validation.R")
 source("./GitHub_code/BFASTutils.R")
 debugSource("./Code/Utils/DRMAT_utils.R")
+debugSource(here("Code", "Utils", "plot_utils.R"))
 # add progress bar option to show it in the terminal 
 pbo <- pboptions(type="timer")
 mycores <- detectCores()
@@ -62,6 +63,7 @@ list_of_cal <- rbind( bp_BIC_00005 = bp_BIC_00005,bp_BIC_0001 = bp_BIC_0001,bp_B
                       bp_AIC_001 = bp_AIC_001,  bp_HQC_00005 = bp_HQC_00005, bp_HQC_0001 =bp_HQC_0001, bp_HQC_001 =bp_HQC_001)
 
 write.csv(list_of_cal, "./cali_ouput/_output_DRMAT_cali_SR_cal.csv" )
+# Result calibration of SR cal: BIC:0.001
 
 # Make a list of results of the calibration for ndvi
 # Make a list of results of the calibration
@@ -70,6 +72,7 @@ list_of_ndvi_cal <- rbind( ndvi_BIC_00005 = ndvi_BIC_00005,ndvi_BIC_0001 = ndvi_
                            ndvi_AIC_001 = ndvi_AIC_001,  ndvi_HQC_00005 = ndvi_HQC_00005, ndvi_HQC_0001 =ndvi_HQC_0001, ndvi_HQC_001 =ndvi_HQC_001)
 
 write.csv(list_of_ndvi_cal, "./cali_ouput/_output_DRMAT_cali_ndvi_cal.csv" )
+# Result calibration of ndvi: BIC 0.001
 
 # # calibrate for ndvi cal interpolated by stlplus + linear interpolation
 # cal_ndvi_nonNan_all <- read.csv("./Data/Data_DRMAT/ndvi_all_cal.csv")
@@ -92,11 +95,10 @@ write.csv(list_of_ndvi_cal, "./cali_ouput/_output_DRMAT_cali_ndvi_cal.csv" )
 # BIC, 0.0005 give the highest score for all cases
 # Read reference data for validation dataset
 val_comb_ref <-read.csv("./Intermediate product/val_compl_data.csv")
-val_ndvi_nonNan_all <- read.csv("./Data/Data_DRMAT/ndvi_all_val.csv")
-val_comb_ref <- tibble::rowid_to_column(val_comb_ref, "ID")
-val_id <- read.csv("./Data/Data_DRMAT/id_ndvi_all_val.csv")
-val_id <- val_id[,2]
-val_comb_ref_rm <- val_comb_ref[val_comb_ref$sample_id %in% val_id,]
+id_val <- read.csv("./Intermediate product/cloud_free_product/DRMAT_final_sampleid_val.csv")
+id_val <- as.data.frame(id_val[,2])
+colnames(id_val) <- c("sample_id")
+val_comb_ref_remain <- val_comb_ref[val_comb_ref$sample_id %in% id_val$sample_id,]
 # # ndvi interpolated by stlplus + linear interpolation
 # bp_BIC_00005_all_ndvi_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_all_ndvi_val.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_all_ndvi_val.txt", val_comb_ref_rm, val_ndvi_nonNan_all)
 # write.csv(bp_BIC_00005_all_val, "./Output/_output_DRMAT_BIC_00005_all_val.csv")
@@ -105,18 +107,37 @@ val_comb_ref_rm <- val_comb_ref[val_comb_ref$sample_id %in% val_id,]
 # write.csv(bp_BIC_00005_all_ndvi_val, "./Output/_output_DRMAT_BIC_00005_all_ndvi_val.csv")
 
 
-# SR interpolated by stlplus
-val_ndvi_nonNan <- read.csv("./Data/Data_DRMAT/ndvi_val.csv")
-val_id_notall <- read.csv("./Data/Data_DRMAT/id_ndvi_val.csv")
-val_id_notall <- val_id_notall[,2]
-val_comb_ref_rm_notall <- val_comb_ref[val_comb_ref$sample_id %in% val_id_notall,]
+# # SR interpolated by stlplus
+# val_ndvi_nonNan <- read.csv("./Data/Data_DRMAT/ndvi_val.csv")
+# val_id_notall <- read.csv("./Data/Data_DRMAT/id_ndvi_val.csv")
+# val_id_notall <- val_id_notall[,2]
+# val_comb_ref_rm_notall <- val_comb_ref[val_comb_ref$sample_id %in% val_id_notall,]
 
-bp_BIC_00005_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_val.txt", "./Data/Data_DRMAT/bpcm_S_BIC_00005_val.txt", val_comb_ref_rm_notall, val_ndvi_nonNan, val_id_notall)
-write.csv(bp_BIC_00005_val, "./Output/_output_DRMAT_BIC_00005_SR_val.csv")
-
-
+bp_BIC_0001_val <- DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_0001_SRval.txt", "./Data/Data_DRMAT/DRMAT_S_BIC_0001_SRval.txt", val_comb_ref_remain, id_val)
+write.csv(bp_BIC_0001_val, "./Output/DRMAT_SR_globe.csv", row.names = FALSE)
+val_comb_ref_remain[val_comb_ref_remain$sample_id == 1405383,]
+duyen <- bp_BIC_0001_val$cm[bp_BIC_0001_val$cm$sample_id == 1405383,]
+bp_BIC_0001_val$stats
 # # ndvi interpolated by stlplus
-bp_BIC_00005_ndvi_val <- DRMAT_conmax("./Data/Data_DRMAT/bpcm_T_BIC_00005_ndvi_val.txt",
-                                      "./Data/Data_DRMAT/bpcm_S_BIC_00005_ndvi_val.txt", val_comb_ref_rm_notall, val_ndvi_nonNan, val_id_notall)
-write.csv(bp_BIC_00005_ndvi_val, "./Output/_output_DRMAT_BIC_00005_ndvi_val.csv")
+bp_BIC_0001_ndvi_val <- DRMAT_conmax("./Data/Data_DRMAT/DRMAT_T_BIC_0001_NDVI_val.txt",
+                                     "./Data/Data_DRMAT/DRMAT_S_BIC_0001_NDVI_val.txt", val_comb_ref_remain, id_val)
+bp_BIC_0001_ndvi_val$stats
+write.csv(bp_BIC_0001_ndvi_val, "./Output/DRMAT_NDVI_globe.csv", row.names = FALSE)
+############################## PLOT TIME SERIES ################################
+# for SR
+DRMAT_bp <- bp_BIC_0001_val$cm
+DRMAT_bp_uni <- unique(DRMAT_bp$sample_id)
+val_comb_ref_drmat_change <- val_comb_ref_remain[val_comb_ref_remain$label == "change",]
+bp_id_uni <- unique(val_comb_ref_drmat_change$sample_id)
+plot_ts_bp_act_cold_SR(1042255,DRMAT_bp, val_comb_ref_drmat_change, 
+                       "./Intermediate product/cloud_free_product/DRMAT_SR_val.csv",
+                       "./Intermediate product/cloud_free_product/DRMAT_NDVI_val.csv",
+                       "./Intermediate product/cloud_free_product/_cloudfree_L8TS_NDVI_val.gpkg")
+
+DRMAT_ndvi_bp <- bp_BIC_0001_ndvi_val$cm
+DRMAT_ndvi_bp_uni <- unique(DRMAT_ndvi_bp$sample_id)
+plot_ts_bp_act_cold(1042255,DRMAT_ndvi_bp, val_comb_ref_drmat_change, 
+                    
+                    "./Intermediate product/cloud_free_product/DRMAT_NDVI_val.csv",
+                    "./Intermediate product/cloud_free_product/BFAST_lite_NDVI_val.gpkg")
 
