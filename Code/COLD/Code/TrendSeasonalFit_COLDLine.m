@@ -166,7 +166,8 @@ imf = vertcat(imf{:});
 
 %% Read in Xs & Ysq
 % transforming to serial date number (0000 year)
-fileName = 'C:\Master_Thesis\COLD\Data\sdate.txt'; % Path to your file
+% fileName = 'C:\Master_Thesis\COLD\Data\sdate.txt'; % Path to your file: calibration data 
+fileName = 'C:\Master_Thesis\COLD\Data\sdate_val.txt'; % Path to your file: valibration data 
 fid = fopen(fileName, 'rt'); % Open the file in read mode (text format)
 
 if fid == -1
@@ -235,33 +236,41 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
     dummy_name = im;
     fid_t = fopen(dummy_name,'r'); % get file ids
      % get Ys
-    rows_stack = 11773;
+    % rows_stack = 11773; % calibration data
     cols_stack = 186;
+    rows_stack = 27869; % validation data
     data = fread(fid_t,rows_stack*cols_stack*nbands,'double','ieee-le');
     % Reshape the data into a 3D matrix (rows x cols x bands)
     stack = reshape(data, [rows_stack, cols_stack, nbands]);
-    nrows = 1:11773;
+    nrows = 1:rows_stack;
     %%%%%% LOOP THROUGH EACH SAMPLE SITE
     % Reshape the dimension of the data. from 11773*186 with 11773 is each
     % row to each observation. Now each observation is loop and convert to
     % 186*1. Do the same for all the bands, so in the end we have for each
     % observation 186*6.
     for i_nrows =  1:length(nrows)
-        %line_t = zeros(cols_stack, nbands);
+        %%%%%%%%%%%%%%% NOT NDVI %%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%line_t = zeros(cols_stack, nbands);
+        % id_band1 = stack(i_nrows,:,1);
+        % id_band1 = reshape(id_band1, size(id_band1,2), size(id_band1,1));
+        % id_band2 = stack(i_nrows,:,2);
+        % id_band2 = reshape(id_band2, size(id_band2,2), size(id_band2,1));
+        % id_band3 = stack(i_nrows,:,3);
+        % id_band3 = reshape(id_band3, size(id_band3,2), size(id_band3,1));
+        % id_band4 = stack(i_nrows,:,4);
+        % id_band4 = reshape(id_band4, size(id_band4,2), size(id_band4,1));
+        % id_band5 = stack(i_nrows,:,5);
+        % id_band5 = reshape(id_band5, size(id_band5,2), size(id_band5,1));
+        % id_band6 = stack(i_nrows,:,6);
+        % id_band6 = reshape(id_band6, size(id_band6,2), size(id_band6,1));
+        % line_t = [id_band1, id_band2, id_band3, id_band4, id_band5, id_band6];
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%% for ndvi
         id_band1 = stack(i_nrows,:,1);
         id_band1 = reshape(id_band1, size(id_band1,2), size(id_band1,1));
-        id_band2 = stack(i_nrows,:,2);
-        id_band2 = reshape(id_band2, size(id_band2,2), size(id_band2,1));
-        id_band3 = stack(i_nrows,:,3);
-        id_band3 = reshape(id_band3, size(id_band3,2), size(id_band3,1));
-        id_band4 = stack(i_nrows,:,4);
-        id_band4 = reshape(id_band4, size(id_band4,2), size(id_band4,1));
-        id_band5 = stack(i_nrows,:,5);
-        id_band5 = reshape(id_band5, size(id_band5,2), size(id_band5,1));
-        id_band6 = stack(i_nrows,:,6);
-        id_band6 = reshape(id_band6, size(id_band6,2), size(id_band6,1));
-        line_t = [id_band1, id_band2, id_band3, id_band4, id_band5, id_band6];
-        %line_t = data(:,); % get Ys
+        line_t = [id_band1];
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%line_t = data(:,); % get Ys
         % initialize NUM of Functional Curves
         num_fc = 0;
         % initialize the struct data of RECording of ChanGe (rec_cg)
@@ -540,15 +549,18 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                 % Tmask: noise removal (good => 0 & noise
                                 % => 1)
                                 % Q: WHY HAS TO ADD CONSE HERE
-                                blIDs = autoTmask(clrx(i_start:i+conse),clry(i_start:i+conse,[num_B1,num_B2]),...
-                                    (clrx(i+conse)-clrx(i_start))/num_yrs,adj_rmse(num_B1),adj_rmse(num_B2),100000);
-                                
-                                % IDs to be removed
-                                IDs = i_start:i+conse;
-                                rmIDs = IDs(blIDs(1:end-conse) == 1);
-                                
-                                % update i_span after noise removal
-                                i_span = sum(~blIDs(1:end-conse));
+                                %%%%%%%%%%%%%%%%%%% NOT FOR NDVI
+                                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+                                % blIDs = autoTmask(clrx(i_start:i+conse),clry(i_start:i+conse,[num_B1,num_B2]),...
+                                %     (clrx(i+conse)-clrx(i_start))/num_yrs,adj_rmse(num_B1),adj_rmse(num_B2),100000);
+                                % 
+                                % % IDs to be removed
+                                % IDs = i_start:i+conse;
+                                % rmIDs = IDs(blIDs(1:end-conse) == 1);
+                                % 
+                                % % update i_span after noise removal
+                                % i_span = sum(~blIDs(1:end-conse));
+                                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                                 
                                 % check if there is enough observation
                                 if i_span < n_times*min_num_c
@@ -561,10 +573,12 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                     % copy x & y
                                     cpx = clrx;
                                     cpy = clry;
-                                    
-                                    % remove noise pixels between i_start & i
-                                    cpx(rmIDs) = [];
-                                    cpy(rmIDs,:) = [];
+                                    %%%%%%%%%%%%%%%%%%%%%%%%% NOT FOR NDVI
+                                    %%%%%%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%
+                                    %remove noise pixels between i_start & i
+                                    % cpx(rmIDs) = [];
+                                    % cpy(rmIDs,:) = [];
+                                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                                     
                                     % record i before noise removal
                                     % This is very important as if model is not initialized
@@ -651,7 +665,7 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                             
                                             if i_start > i_break % MOVE BACKWARDS TO ADJUST THE START DATE
                                                 % MODEL FIT AT THE BEGINING OF THE TIME SERIES
-                                                for i_ini = i_start-1:-1:i_break % run backward % i_start -1 beacuse we want to reserve the value of i_start, making it a breakpoint when when save record
+                                                for i_ini = i_start-1:-1:i_break % run backward % i_start -1 beacuse we want to reserve the value of i_start, making it a breakpoint when when save record. The i_start date will abe adjusted if there is no break detected in the previous points
                                                     if i_start - i_break < conse
                                                         ini_conse = i_start - i_break;
                                                     else
@@ -663,26 +677,42 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                                     v_dif_mag = v_dif;
                                                     % chagne vector magnitude
                                                     vec_mag = zeros(ini_conse,1);
+                                                    % %%%%%%%%%%%%%% PLOT
+                                                    % %%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%
+                                                    % figure; % Create a new figure
+                                                    % hold on; % Keep all plots on the same figure
                                                     
+                                                    % Loop over all consecutive values
                                                     for i_conse = 1:ini_conse
                                                         for i_B = 1:nbands
-                                                            % absolute difference
-                                                            v_dif_mag(i_conse,i_B) = clry(i_ini-i_conse+1,i_B)-autoTSPred(clrx(i_ini-i_conse+1),fit_cft(:,i_B));
-                                                            % normalized to z-scores
+                                                            % Compute absolute difference
+                                                            v_dif_mag(i_conse, i_B) = clry(i_ini - i_conse + 1, i_B) - autoTSPred(clrx(i_ini - i_conse + 1), fit_cft(:, i_B));
+                                                    
+                                                            % Normalize using z-scores if in B_detect
                                                             if sum(i_B == B_detect)
-                                                                % minimum
-                                                                % rmse %
-                                                                % not rmse
-                                                                % of conse
-                                                                % obs?!?
-                                                                mini_rmse = max(adj_rmse(i_B),rmse(i_B));
-                                                                
-                                                                % z-scores
-                                                                v_dif(i_conse,i_B) = v_dif_mag(i_conse,i_B)/mini_rmse;
+                                                                mini_rmse = max(adj_rmse(i_B), rmse(i_B)); % Minimum RMSE
+                                                                v_dif(i_conse, i_B) = v_dif_mag(i_conse, i_B) / mini_rmse;
                                                             end
                                                         end
-                                                        vec_mag(i_conse) = norm(v_dif(i_conse,B_detect))^2;
+                                                        vec_mag(i_conse) = norm(v_dif(i_conse, B_detect))^2;
+                                                    
+                                                        % % Plot observed and predicted values
+                                                        % plot(clrx(i_ini - i_conse + 1), clry(i_ini - i_conse + 1, i_B), 'ko', 'MarkerFaceColor', 'k', 'DisplayName', 'Observed'); % Observed values
+                                                        % plot(clrx(i_ini - i_conse + 1), autoTSPred(clrx(i_ini - i_conse + 1), fit_cft(:, i_B)), 'b^', 'MarkerFaceColor', 'b', 'DisplayName', 'Predicted'); % Predicted values
+                                                        % 
+                                                        % % Plot absolute difference
+                                                        % plot(clrx(i_ini - i_conse + 1), v_dif_mag(i_conse, i_B), 'ro', 'MarkerFaceColor', 'r', 'DisplayName', 'Difference');
                                                     end
+                                                    
+                                                    % % Formatting the plot
+                                                    % xlabel('Julian Day', 'FontSize', 12);
+                                                    % ylabel('Reflectance Value', 'FontSize', 12);
+                                                    % title('Observed vs. Predicted vs. Difference Magnitude', 'FontSize', 14);
+                                                    % legend({'Observed', 'Predicted', 'Difference'}, 'Location', 'Best');
+                                                    % grid on;
+                                                    % set(gca, 'FontSize', 12);
+                                                    % 
+                                                    % hold off; % Reset plot behavior
                                                     
                                                     % get the vec sign
                                                     % vec_sign = abs(sum(sign(v_dif(:,B_detect)),1));
@@ -706,8 +736,17 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                                     i_start = i_ini; % UPDATE A NEW START DATE FOR THE TIME SERIES
                                                 end
                                             end
+                                           % after adjust the start date
+                                           % and there are still
+                                           % observation but not enough for
+                                           % window model initializing.?!
+                                           % check again
+                                           
                                             % RUN QA= 10 if:
-                                            % only fit first curve if 1) have more than
+                                            % only fit first curve if 1)
+                                            % the segments
+                                          
+                                            % have more than defined
                                             % conse obs 2) previous obs is less than a year
                                             if num_fc == rec_fc && i_start - i_dense >= conse
                                                 % defining computed variables
@@ -815,24 +854,78 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                     % record the magnitude of change
                                     v_dif_mag = v_dif;
                                     vec_mag = zeros(conse,1);
+
+
+%%%%%%%%%%%%%%%%%%%%% PLOT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+                                   % figure; % Create a new figure
+                                   %  hold on; % Keep all plots on the same figure
                                     
-                                    for i_conse = 1:conse
+                                    matrix_pred = zeros(6, 6);
+                                    matrix_act = zeros(6, 6);
+                                    
+                                    % Define colors for 6 bands (RGB format)
+                                    colors = ['b', 'r', 'g', 'm', 'c', 'k']; % Blue, Red, Green, Magenta, Cyan, Black
+                                    
+                                    for i_conse = 1:6
                                         for i_B = 1:nbands
-                                            % absolute difference
-                                            v_dif_mag(i_conse,i_B) = clry(i+i_conse,i_B)-autoTSPred(clrx(i+i_conse),fit_cft(:,i_B));
-                                            % normalized to z-scores
-                                            if sum(i_B == B_detect)
-                                                % minimum rmse
-                                                mini_rmse = max(adj_rmse(i_B),rmse(i_B));
-                                                
-                                                % z-scores
-                                                v_dif(i_conse,i_B) = v_dif_mag(i_conse,i_B)/mini_rmse;
+                                            % Compute predicted values and actual values
+                                            pred_value = autoTSPred(clrx(i + i_conse), fit_cft(:, i_B));
+                                            act_value = clry(i + i_conse, i_B);
+                                            
+                                            % Store values in matrices
+                                            matrix_pred(i_B, i_conse) = pred_value;
+                                            matrix_act(i_B, i_conse) = act_value;
+                                    
+                                            % Absolute difference
+                                            v_dif_mag(i_conse, i_B) = act_value - pred_value;
+                                    
+                                            % Normalized to z-scores
+                                            if any(i_B == B_detect) % Use `any` instead of `sum`
+                                                mini_rmse = max(adj_rmse(i_B), rmse(i_B));
+                                                v_dif(i_conse, i_B) = v_dif_mag(i_conse, i_B) / mini_rmse;
                                             end
                                         end
-                                        vec_mag(i_conse) = norm(v_dif(i_conse,B_detect))^2;
+                                        vec_mag(i_conse) = norm(v_dif(i_conse, B_detect))^2;
                                     end
+                                    
+                                    % % Define valid index range for `clrx`
+                                    % valid_range = i:(i + 5); % Ensure indices do not exceed clrx size
+                                    % valid_range = valid_range(valid_range <= length(clrx));
+                                    % 
+                                    % for i_band = 1:6
+                                    %     % Assign a color for each band
+                                    %     line_color = colors(mod(i_band - 1, length(colors)) + 1); 
+                                    % 
+                                    %     % Plot observed and predicted values with custom colors
+                                    %     plot(clrx(valid_range), matrix_pred(i_band, 1:length(valid_range)), strcat(line_color, 'o-'), 'LineWidth', 1.5, 'DisplayName', sprintf('Predicted Band %d', i_band));
+                                    %     plot(clrx(valid_range), matrix_act(i_band, 1:length(valid_range)), strcat(line_color, '*--'), 'LineWidth', 1.5, 'DisplayName', sprintf('Observed Band %d', i_band));
+                                    % end
+                                    
+                                    % % Formatting
+                                    % xlabel('Julian Day', 'FontSize', 12);
+                                    % ylabel('Reflectance Value', 'FontSize', 12);
+                                    % title('Observed vs. Predicted of six consecutive  for All Bands', 'FontSize', 14);
+                                    % % Create legend and move it outside the graph
+                                    % legend_handle = legend('show');
+                                    % set(legend_handle, 'Location', 'eastoutside'); % Moves legend to the right outside the graph
+                                    % set(legend_handle, 'Box', 'off'); % Optional: Removes the legend box outline
+                                    % 
+                                    % grid on;
+                                    % set(gca, 'FontSize', 12);
+                                    % hold off;
+
+                                             
                                     % IDs that haven't updated
                                     IDsOld = IDs;
+
+
+
+
+
+
+
+
+
                                  else
                                     if i - pre_end >= 3%######Junxue %clrx(i)-clrx(i_start) >= num_yrs%1.33*i_count % Q: Why >3?
                                         % update i_count at each interation
@@ -919,9 +1012,16 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                     % change vector magnitude
                                     vec_mag(conse) = 0;
                                     
+
+                                    %matrix_pred_new = zeros(6,6);
+                                    matrix_pred(:,1:5) = matrix_pred(:,2:6);
+                                    %matrix_act_new = zeros(6,6);
+                                    matrix_act(:,1:5)= matrix_act(:,2:6);
                                     for i_B = 1:nbands
                                         % absolute difference
                                         v_dif_mag(conse,i_B) = clry(i+conse,i_B)-autoTSPred(clrx(i+conse),fit_cft(:,i_B));
+                                        matrix_pred(i_B, conse) = autoTSPred(clrx(i+conse),fit_cft(:,i_B));
+                                        matrix_act(i_B, conse) = clry(i+conse,i_B);
                                         % normalized to z-scores
                                         if sum(i_B == B_detect)
                                             % minimum rmse
@@ -932,7 +1032,52 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                                         end
                                     end
                                     vec_mag(conse) = norm(v_dif(end,B_detect))^2;
+                                    %%%%%%%%%%% PLOT %%%%%%%%%%%%%%%
+                                    % figure; % Create a new figure
+                                    % hold on; % Keep all plots on the same figure
+                                    % 
+                                    % 
+                                    % % Define colors for 6 bands (RGB format)
+                                    % colors = ['b', 'r', 'g', 'm', 'c', 'k']; % Blue, Red, Green, Magenta, Cyan, Black
+                                    % 
+                                    % 
+                                    % 
+                                    % % Define valid index range for `clrx`
+                                    % valid_range = i:(i + 5); % Ensure indices do not exceed clrx size
+                                    % valid_range = valid_range(valid_range <= length(clrx));
+                                    % 
+                                    % for i_band = 1:6
+                                    %     % Assign a color for each band
+                                    %     line_color = colors(mod(i_band - 1, length(colors)) + 1); 
+                                    % 
+                                    %     % Plot observed and predicted values with custom colors
+                                    %     plot(clrx(valid_range), matrix_pred(i_band, 1:length(valid_range)), strcat(line_color, 'o-'), 'LineWidth', 1.5, 'DisplayName', sprintf('Predicted Band %d', i_band));
+                                    %     plot(clrx(valid_range), matrix_act(i_band, 1:length(valid_range)), strcat(line_color, '*--'), 'LineWidth', 1.5, 'DisplayName', sprintf('Observed Band %d', i_band));
+                                    % end
+                                    % 
+                                    % % Formatting
+                                    % xlabel('Julian Day', 'FontSize', 12);
+                                    % ylabel('Reflectance Value', 'FontSize', 12);
+                                    % title('Observed vs. Predicted of six consecutive observations for all bands', 'FontSize', 14);
+                                    % 
+                                    % grid on;
+                                    % set(gca, 'FontSize', 12);
+                                    % 
+                                    % 
+                                    % % Create legend and move it outside the graph
+                                    % legend_handle = legend('show');
+                                    % set(legend_handle, 'Location', 'eastoutside'); % Moves legend to the right outside the graph
+                                    % set(legend_handle, 'Box', 'off'); % Optional: Removes the legend box outline
+                                    % 
+                                    % hold off;
+                                    % 
+
+
                                 end
+                                
+
+
+
                                 
                                 % sign of change vector
                                 % vec_sign = abs(sum(sign(v_dif(:,B_detect)),1));
@@ -1010,20 +1155,22 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
                         end
                         
                         % Tmask
-                        if length(clrx(i_start:end)) > conse
-                            blIDs = autoTmask(clrx(i_start:end),clry(i_start:end,[num_B1,num_B2]),...
-                                (clrx(end)-clrx(i_start))/num_yrs,adj_rmse(num_B1),adj_rmse(num_B2),100000);
-                            
-                            % update i_span after noise removal
-                            i_span = sum(~blIDs); %#ok<NASGU>
-                            
-                            IDs = i_start:length(clrx); % all IDs
-                            rmIDs = IDs(blIDs(1:end-conse) == 1); % IDs to be removed
-                            
-                            % remove noise pixels between i_start & i
-                            clrx(rmIDs) = [];
-                            clry(rmIDs,:) = [];
-                        end
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NOT NDVI %%%%
+                        % if length(clrx(i_start:end)) > conse
+                        %     blIDs = autoTmask(clrx(i_start:end),clry(i_start:end,[num_B1,num_B2]),...
+                        %         (clrx(end)-clrx(i_start))/num_yrs,adj_rmse(num_B1),adj_rmse(num_B2),100000);
+                        % 
+                        %     % update i_span after noise removal
+                        %     i_span = sum(~blIDs); %#ok<NASGU>
+                        % 
+                        %     IDs = i_start:length(clrx); % all IDs
+                        %     rmIDs = IDs(blIDs(1:end-conse) == 1); % IDs to be removed
+                        % 
+                        %     % remove noise pixels between i_start & i
+                        %     clrx(rmIDs) = [];
+                        %     clry(rmIDs,:) = [];
+                        % end
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         
                         % enough data
                         if length(clrx(i_start:end)) >= conse
@@ -1074,6 +1221,7 @@ rec_cg = struct('t_start',[],'t_end',[],'t_break',[],'coefs',[],'rmse',[],...
         movefile([dir_l,'/',n_rst,'/',file_name_mat_part], [dir_l,'/',n_rst,'/',file_name_mat]);
     end  % end of loop for nrows
 end % end of function
+
 
 % function to caculate included angle between ajacent pair of change vectors
 function y = angl(v_dif)

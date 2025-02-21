@@ -30,7 +30,7 @@ try inputs = textread('COLD_Parameters.txt'); %#ok<DTXTRD> Q: could not find an 
     max_c = inputs(3); % 8
 catch me %#ok<NASGU>
     % change threshold
-    T_cg = 0.99;
+    T_cg = 0.9;
     % number of consecutive obs
     conse = 6;
     % maximum number of coefficients
@@ -38,7 +38,8 @@ catch me %#ok<NASGU>
 end
 %% Constants:
 % Bands for detection change
-B_detect = 1:6;
+B_detect = 1; % for ndvi
+ % B_detect = 1:6; % for all bands
 % version of CCDC
 ccdc_v = 13.03;
 % Treshold of noise
@@ -50,7 +51,8 @@ imf(~[imf.isdir]) = []; % only directory
 %[nrows,ncols,nbands,~,~,~,num_imgs] = autoPara(imf); % ~ (Placeholder):    The tilde (~) is used to ignore output arguments that are not needed. In this context, there are three unused values after nbands that the function or operation returns, but the script chooses to disregard them.
 nrows = 186
 ncols = 1
-nbands = 6
+%nbands = 6 % all bands
+nbands = 1 % for ndvi
 num_imgs = 1
 % folder name of all CCDC results 
 name_rst = 'TSFitMap';
