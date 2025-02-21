@@ -47,7 +47,8 @@ DRMAT_conmax <- function(bpTfile, bpSfile, comb_ref_rm, sample_ids_of_obs_nonNan
   # calculate the stats
   DRMAT_IC_ridgidnr_stats <- myFPStats(DRMAT_SR_cal, NewAccuracy = TRUE)
   # return the stats
-  return(DRMAT_IC_ridgidnr_stats)
+  bpandstats <- list("stats" = DRMAT_IC_ridgidnr_stats, "cm" = bp_IC_ridgidnr_all)
+  return(bpandstats)
   
   
 }
